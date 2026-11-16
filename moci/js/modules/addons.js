@@ -320,7 +320,7 @@ export default class AddonsModule {
 		try {
 			aclText = await this.core.pkgCall('inspect', pkgName);
 		} catch (err) {
-			infoEl.innerHTML = `<div style="color: var(--error-red)">Could not inspect package: ${this.core.escapeHtml(err.message)}</div>`;
+			infoEl.innerHTML = `<div style="color: var(--bad)">Could not inspect package: ${this.core.escapeHtml(err.message)}</div>`;
 			return;
 		}
 
@@ -382,7 +382,7 @@ export default class AddonsModule {
 			.map(
 				i => `<div class="addon-permission-item">
 				<span class="addon-permission-scope">${esc(i.scope)}</span>
-				<span class="badge badge-info" style="font-size: 9px; padding: 2px 5px">${esc(i.access)}${i.detail ? `: ${esc(i.detail)}` : ''}</span>
+				<span class="badge badge-info">${esc(i.access)}${i.detail ? `: ${esc(i.detail)}` : ''}</span>
 			</div>`
 			)
 			.join('');
@@ -579,3 +579,4 @@ export default class AddonsModule {
 		this._registryCleanup = null;
 	}
 }
+

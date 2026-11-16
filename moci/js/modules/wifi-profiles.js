@@ -58,7 +58,7 @@ export default class WifiProfilesModule{
   }
   render(){
     const root=this.root;root.replaceChildren();
-    root.append(this.elem('p','Assign different passwords on the same SSID to different isolated security profiles. Each password maps to an existing logical network and VLAN. Your wireless chipset and hostapd package must support dynamic VLANs.','profiles-description'));
+    root.append(this.elem('p','Give each security profile its own Wi-Fi password on the same SSID. Requires a radio and hostapd with dynamic-VLAN support.','profiles-description'));
     if(!this.wifiAvailable){
       root.append(this.elem('p','No wireless configuration is available. This is expected in VirtualBox and other Ethernet-only x86 installations. This feature requires a compatible Wi-Fi radio, an existing access point and full wpad/hostapd with dynamic VLAN support.','profiles-description'));
     }
@@ -154,3 +154,4 @@ export default class WifiProfilesModule{
     }
   }
 }
+
