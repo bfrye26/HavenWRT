@@ -12,7 +12,12 @@ for(const root of roots){
   }
 }
 const html=readFileSync('moci/index.html','utf8');
-for(const symbol of ['\u2193','\u2191','\u25c6','\u25cf']){
+// Redesigned dashboard uses an em-dash placeholder, ellipsis loading text, and
+// HTML entities for the check / menu / arrow icons (SVG replaces the old glyphs).
+for(const symbol of ['\u2014','\u2026']){
   assert(html.includes(symbol),`Dashboard symbol U+${symbol.codePointAt(0).toString(16)} was lost`);
+}
+for(const entity of ['&#10003;','&#8943;','&rarr;']){
+  assert(html.includes(entity),`Dashboard entity ${entity} was lost`);
 }
 console.log('UI text encoding passed: UTF-8 symbols retained and control characters absent.');

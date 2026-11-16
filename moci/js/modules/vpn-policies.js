@@ -94,7 +94,7 @@ export default class VpnPoliciesModule{
   }
   render(){
     const root=this.root;root.replaceChildren();
-    root.append(this.el('p','Route selected security profiles through existing outbound WireGuard tunnels. Add a second WireGuard hop using a static endpoint route. WAN fallback is blocked by the profile firewall zone when there is no WAN forwarding.','profiles-description'));
+    root.append(this.el('p','Route selected security profiles through outbound WireGuard tunnels. WAN fallback is blocked while a tunnel is down.','profiles-description'));
     if(!this.pbrAvailable){
       root.append(this.el('p','Policy-based routing (pbr) is not installed or configured. Outbound per-profile VPN routing is disabled until pbr is available, but inbound WireGuard and existing network configuration can still be viewed.','profiles-description'));
     }

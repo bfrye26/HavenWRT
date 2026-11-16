@@ -86,7 +86,7 @@ export default class UpnpModule {
   render(root,cfg,status){
     root.replaceChildren();
     root.append(this.el('h3','UPnP & Automatic Port Mapping'),
-      this.el('p','Choose which trusted devices may request incoming ports. The saved settings below reflect this router. Secure mode is enforced, and requests from the WAN are never accepted.','profiles-description'));
+      this.el('p','Choose which trusted devices may request incoming ports. Secure mode is enforced; WAN requests are never accepted.','profiles-description'));
     const indicators=this.el('div',undefined,'upnp-status-cards');
     const badge=(name,value)=>{
       const card=this.el('div',undefined,'stat-card');
@@ -131,7 +131,7 @@ export default class UpnpModule {
     external.value='wan';
     this.field(routing,'External IPv4 interface',external);
     const rules=Object.entries(this.cfg).filter(([,v])=>v?.['.type']==='perm_rule');
-    root.append(this.el('p','Port permission policy is ordered. Requests are evaluated against the rules below, with deny as the fallback. Restrict unknown devices through your firewall and separate guest/IoT networks.','profiles-description'));
+    root.append(this.el('p','Rules are evaluated in order, with deny as the fallback.','profiles-description'));
     const existingList=this.el('div',undefined,'upnp-permissions');
     for(const [,v] of rules){
       const p=this.el('p',(v.action||'deny').toUpperCase()+' · external '+(v.ext_ports||'?')+
@@ -230,7 +230,7 @@ export default class UpnpModule {
     table.append(tbody);root.append(table);
     const refresh=this.el('button','REFRESH ACTIVE MAPPINGS','action-btn');refresh.type='button';
     refresh.addEventListener('click',()=>this.load(this._loadTarget));root.append(refresh);
-    root.append(this.el('p','Mapping descriptions are untrusted client input and are displayed as text only. Leases expire automatically; delegated devices may only forward ports to themselves (secure mode).','profiles-description'));
+    root.append(this.el('p','Descriptions are untrusted client input, shown as text only. Leases expire automatically.','profiles-description'));
   }
   fmtExpiry(epoch){
     if(!epoch)return '—';
@@ -247,7 +247,7 @@ export default class UpnpModule {
   }
   renderDelegation(root){
     root.append(this.el('h3','Delegated device access'));
-    root.append(this.el('p','Off by default. Explicitly grant a trusted device permission to open its own incoming ports via UPnP/NAT-PMP (self-service). Devices without a delegation are denied. Leases expire automatically and secure mode keeps each device forwarding only to itself.','profiles-description'));
+    root.append(this.el('p','Off by default. Grant a trusted device permission to open its own incoming ports; undelegated devices are denied and leases expire automatically.','profiles-description'));
     const rules=Object.entries(this.cfg||{}).filter(([,v])=>v?.['.type']==='perm_rule'&&String(v.comment||'').startsWith('MoCI delegation'));
     const list=this.el('div',undefined,'upnp-permissions');
     if(!rules.length)list.append(this.el('p','No devices delegated. Add one below to allow it to request ports.','profiles-description'));

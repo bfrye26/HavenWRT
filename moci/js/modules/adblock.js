@@ -58,9 +58,15 @@ export default class AdblockModule{
 		const count=/([\d.,]+)\s*(domains|blocked)/i.exec(this.status);
 		if(count)summary.append(stat(count[1],'Domains in blocklist'));
 		root.append(summary);
-		root.append(this.el('h3','Status'));
-		const pre=this.el('pre',undefined,'log-view');pre.textContent=this.status.trim()||'No status returned. Enable blocking and refresh.';
-		root.append(pre);
+		const statusRows=this.parseStatus(this.status);
+		if(statusRows.length){
+			const table=this.el('table',undefined,'data-table');
+			const rows=statusRows.map(([k,v])=>`<tr><td>${esc(k)}</td><td class="dev-mono">${esc(v)}</td></tr>`).join('');
+			table.innerHTML='<thead><tr><th>Property</th><th>Value</th></tr></thead><tbody>'+rows+'</tbody>';
+			root.append(table);
+		}else{
+			root.append(this.el('div','No status returned. Enable blocking and refresh.','addon-empty'));
+		}
 		const sources=Object.entries(this.cfg).filter(([,v])=>v?.['.type']==='source');
 		root.append(this.el('h3','Blocklist sources'));
 		if(!sources.length){
@@ -73,6 +79,15 @@ export default class AdblockModule{
 			table.innerHTML='<thead><tr><th>Source</th><th>State</th><th>URL</th></tr></thead><tbody>'+rows+'</tbody>';
 			root.append(table);
 		}
+	}
+	parseStatus(text){
+		const labels={adblock_status:'Status',blocked_domains:'Blocked domains',frontend_ver:'Frontend version',backend_ver:'Backend version',active_sources:'Active sources',adb_dns:'DNS backend',adb_fetchutil:'Fetch utility'};
+		const out=[];
+		for(const line of String(text||'').split('\n')){
+			const m=/\+\s*([a-z_]+)\s*:\s*(.+)/i.exec(line);
+			if(m&&labels[m[1]])out.push([labels[m[1]],m[2].trim()]);
+		}
+		return out;
 	}
 	async setEnabled(on){
 		if(this.busy)return;this.busy=true;this.render();

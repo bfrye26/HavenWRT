@@ -88,7 +88,7 @@ export default class EthernetProfilesModule{
   }
   render(){
     const root=this.root;root.replaceChildren();
-    root.append(this.el('p','Give a physical Ethernet port its own private subnet, DHCP service and isolated firewall zone. The WAN uplink is reserved, and the last remaining LAN port stays in the management bridge; any other LAN port can be reclaimed into a profile (it is removed from the LAN bridge).','profiles-description'));
+    root.append(this.el('p','Give a physical port its own subnet, DHCP and isolated firewall zone. The WAN uplink and the last management LAN port are reserved.','profiles-description'));
     const reserved=this.allReservedPorts();
     const free=this.ports.filter(port=>!reserved.has(port));
     const owned=Object.entries(this.network).filter(([name,value])=>
