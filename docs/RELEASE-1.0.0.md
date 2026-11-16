@@ -10,11 +10,11 @@ store, and signed opt-in updates.
 Built on OpenWrt **v25.12.6**.
 
 **Firmware image SHA-256:**
-`IMAGE_HASH_PLACEHOLDER`
+`d1a18ee1e7b3262f4fc2082839f0c2e80704a03eb9ec47fa229cc1d8b1fd70d3`
 (`openwrt-x86-64-generic-ext4-combined-efi.img.gz`)
 
 **Installer ISO SHA-256 (dual-boot BIOS + UEFI):**
-`ISO_HASH_PLACEHOLDER`
+`8d5cb8da689682ded6d6883eddd361813f9715431925bffc401eda6dd0339547`
 (`MoCI-x86-64-Installer.iso`)
 
 ## What's in Haven 1.0.0
