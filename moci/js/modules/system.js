@@ -1268,7 +1268,7 @@ export default class SystemModule {
 		root.append(row);
 		root.append(el('p', 'Updates are signed and opt-in — nothing installs automatically. Download the latest release image and its .sig signature, then use the manual upgrade below: Haven verifies the signature before installing (Install now), or you can close this page and update later. A bad signature blocks installation; an unsigned image needs an extra confirmation.', 'page-note'));
 		const links = el('div', undefined, 'dev-modal-actions');
-		const rel = el('a', 'LATEST RELEASES', 'action-btn'); rel.href = 'https://github.com/bfrye26/MoCI/releases'; rel.target = '_blank'; rel.rel = 'noopener';
+		const rel = el('a', 'LATEST RELEASES', 'action-btn'); rel.href = 'https://github.com/bfrye26/HavenWRT/releases'; rel.target = '_blank'; rel.rel = 'noopener';
 		const asu = el('a', 'ONLINE UPDATE (LuCI)', 'action-btn'); asu.href = '/cgi-bin/luci/admin/system/attendedsysupgrade'; asu.target = '_blank'; asu.rel = 'noopener';
 		const check = el('button', 'CHECK FOR UPDATES', 'action-btn'); check.type = 'button';
 		links.append(check, rel, asu);
@@ -1278,14 +1278,14 @@ export default class SystemModule {
 		check.addEventListener('click', async () => {
 			check.disabled = true; result.textContent = 'Checking for a newer Haven release…';
 			try {
-				const resp = await fetch('https://api.github.com/repos/bfrye26/MoCI/releases/latest', { headers: { 'Accept': 'application/vnd.github+json' } });
+				const resp = await fetch('https://api.github.com/repos/bfrye26/HavenWRT/releases/latest', { headers: { 'Accept': 'application/vnd.github+json' } });
 				if (!resp.ok) throw new Error('release check returned ' + resp.status);
 				const data = await resp.json();
 				const latest = String(data.tag_name || '').replace(/^v/, '');
 				result.replaceChildren();
 				if (latest && latest !== version) {
 					result.append(el('strong', 'Update available: Haven ' + latest + ' (installed ' + version + '). ', 'dev-name'));
-					const a = el('a', 'View release', 'action-btn'); a.href = data.html_url || 'https://github.com/bfrye26/MoCI/releases'; a.target = '_blank'; a.rel = 'noopener';
+					const a = el('a', 'View release', 'action-btn'); a.href = data.html_url || 'https://github.com/bfrye26/HavenWRT/releases'; a.target = '_blank'; a.rel = 'noopener';
 					result.append(a);
 				} else {
 					result.textContent = 'You are running the latest release (' + version + ').';

@@ -79,7 +79,7 @@ printf '[MoCI] Output: %s\n' "$output"
 openwrt=$(moci_select_openwrt "$openwrt" "$project_root/openwrt-ship-v25.12.6" v25.12.6 https://github.com/openwrt/openwrt.git)
 printf '[MoCI] Selected OpenWrt tree: %s\n' "$openwrt"
 if ! git -C "$original" cat-file -e "$commit^{commit}" 2>/dev/null; then
-    git -C "$original" fetch https://github.com/bfrye26/MoCI.git "$branch"
+    git -C "$original" fetch https://github.com/bfrye26/HavenWRT.git "$branch"
 fi
 git -C "$original" cat-file -e "$commit^{commit}" || die 'Reviewed source commit is unavailable.'
 if [[ ! -e "$checkout" ]]; then
