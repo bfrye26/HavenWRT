@@ -381,8 +381,8 @@ export default class SystemModule {
 				if(event.key==='Enter'){event.preventDefault();run('search-general');}
 			});
 			toolbar.append(label,search,add,refresh,results);
-			const card=table.closest('.stat-card');
-			card?.insertBefore(toolbar,table);
+			const tableEl=document.getElementById('packages-table');
+			if(tableEl&&tableEl.parentNode)tableEl.parentNode.insertBefore(toolbar,tableEl);
 		}
 		table.replaceChildren();
 		const loading=document.createElement('tr');
@@ -437,7 +437,11 @@ export default class SystemModule {
 		}catch(error){
 			table.replaceChildren();
 			const row=document.createElement('tr'),td=document.createElement('td');
-			td.colSpan=3;td.textContent='Package database unavailable: '+error.message;
+			td.colSpan=3;td.textContent='Could not load installed packages: '+error.message+' ';
+			const retry=document.createElement('button');
+			retry.type='button';retry.className='action-btn-sm';retry.textContent='Retry';
+			retry.addEventListener('click',()=>this.loadPackages());
+			td.appendChild(retry);
 			row.appendChild(td);table.appendChild(row);
 		}
 	}

@@ -98,7 +98,7 @@ export default class NetworkModule {
 
 	async loadUpnp(){
 		if(!this.upnp){
-			const {default: UpnpModule}=await import('./upnp.js?v=1.0.0r4');
+			const {default: UpnpModule}=await import('./upnp.js?v=1.0.0r5');
 			this.upnp=new UpnpModule(this.core);
 		}
 		await this.upnp.load(document.getElementById('tab-upnp'));
@@ -1440,11 +1440,7 @@ export default class NetworkModule {
 		root.append(el('div', 'PUBLISHED DNS RECORDS (RFC 2136)', 'section-title'));
 		root.append(el('p', 'Devices you opt in below can publish their own DNS names (record type A/AAAA) to the router on UDP port ' + data.port + ', within the .' + data.domain + ' domain. Publishing is off by default; a device’s records are removed when it loses its DHCP lease. Router and admin names are reserved.', 'page-note'));
 		// Opt-in manager
-		const form = el('form', undefined, 'profiles-allow-form');
-		const ip = el('input'); ip.placeholder = 'Device IPv4 to allow publishing'; ip.required = true; ip.maxLength = 15;
-		ip.setAttribute('aria-label', 'Device IPv4 allowed to publish DNS');
-		const allow = el('button', 'ALLOW DEVICE', 'action-btn'); allow.type = 'submit';
-		form.append(ip, allow);
+		const { form, input: ip, button: allow } = this.core.deviceAddressForm({ label: 'Device IPv4 allowed to publish DNS', placeholder: 'e.g. 192.168.50.40', buttonText: 'Allow device' });
 		form.addEventListener('submit', async e => {
 			e.preventDefault();
 			const value = ip.value.trim();
@@ -1695,8 +1691,17 @@ export default class NetworkModule {
 
 	async loadQoS() {
 		await this.core.loadResource('qos-rules-table', 6, 'qos', async () => {
-			const [status, result] = await this.core.uciGet('qos');
-			if (status !== 0 || !result?.values) throw new Error('No data');
+			let status, result;
+			try {
+				[status, result] = await this.core.uciGet('qos');
+			} catch (err) {
+				throw err; // transport/RPC failure -> error state with Retry
+			}
+			if (status !== 0 || !result?.values) {
+				// Classic QoS config is optional; an absent/empty config is a valid empty state.
+				this.core.renderTable('#qos-rules-table', [], 6, 'No classification rules configured.', () => '');
+				return;
+			}
 			const config = result.values;
 
 			const iface = Object.entries(config).find(([, v]) => v['.type'] === 'interface');
@@ -1891,26 +1896,30 @@ export default class NetworkModule {
 
 	async loadDiagnostics() {
 		if (!this.core.isFeatureEnabled('diagnostics')) return;
-		await this.core.loadResource('dhcp-clients-table', 4, null, async () => {
-			let leases = [];
-			try {
-				const [s, r] = await this.core.ubusCall('moci', 'getDHCPLeases', {});
-				if (s === 0 && r?.dhcp_leases) leases = r.dhcp_leases;
-			} catch {}
-
+		await this.core.loadResource('connections-table', 4, null, async () => {
+			const [s, r] = await this.core.ubusCall('moci', 'getDHCPLeases', {}, { timeout: 10000 });
+			if (s !== 0) throw new Error('Could not read DHCP leases');
+			const leases = r?.dhcp_leases || [];
 			this.core.renderTable(
-				'#dhcp-clients-table',
+				'#connections-table',
 				leases,
 				4,
-				'No DHCP clients',
+				'No clients connected.',
 				l => `<tr>
-				<td>${this.core.escapeHtml(l.ipaddr || 'N/A')}</td>
-				<td>${this.core.escapeHtml(l.macaddr || 'N/A')}</td>
+				<td class="dev-mono">${this.core.escapeHtml(l.ipaddr || '—')}</td>
+				<td class="dev-mono">${this.core.escapeHtml(l.macaddr || '—')}</td>
 				<td>${this.core.escapeHtml(l.hostname || 'Unknown')}</td>
-				<td>${l.expires > 0 ? l.expires + 's' : 'Permanent'}</td>
+				<td>${this.fmtLeaseExpiry(l.expires)}</td>
 			</tr>`
 			);
 		});
+	}
+
+	fmtLeaseExpiry(sec) {
+		if (!(sec > 0)) return 'Static';
+		if (sec >= 3600) return Math.floor(sec / 3600) + 'h ' + Math.floor((sec % 3600) / 60) + 'm';
+		if (sec >= 60) return Math.floor(sec / 60) + 'm';
+		return sec + 's';
 	}
 
 	async runDiagnostic(type) {

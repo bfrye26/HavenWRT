@@ -32,7 +32,7 @@ export default class DevicesModule{
 				this.uci('get',{config:'network'}).catch(()=>({values:{}})),
 				this.uci('get',{config:'firewall'}).catch(()=>({values:{}})),
 				this.rpc('file','read',{path:'/proc/net/arp'}).catch(()=>({data:''})),
-				import('./oui-data.js?v=1.0.0r4').then(m=>m.default).catch(()=>({}))
+				import('./oui-data.js?v=1.0.0r5').then(m=>m.default).catch(()=>({}))
 			]);
 			this.oui=oui||{};
 			this.leases=Array.isArray(leases.dhcp_leases)?leases.dhcp_leases:[];
@@ -116,40 +116,55 @@ export default class DevicesModule{
 		// Connected devices
 		root.append(this.el('h3','Connected devices'));
 		root.append(this.el('p','Every device seen on your LAN, whether or not this router handed out its address (another DHCP server, e.g. a mesh system, may serve some). Make a device’s address static so it never changes — useful for servers, printers and port forwarding.','page-note'));
+		const toolbar=this.el('div',undefined,'page-toolbar');
+		const search=this.el('input');search.type='search';search.className='form-input';search.placeholder='Search by name, IP or MAC';search.setAttribute('aria-label','Search devices');search.style.maxWidth='320px';
+		const count=this.el('span',undefined,'page-note');count.style.margin='0';
+		toolbar.append(search,count);root.append(toolbar);
 		const table=this.el('table',undefined,'data-table dev-table');
 		const thead=this.el('thead');const hr=this.el('tr');
 		for(const h of ['Device','Vendor','IP address','Profile','Lease','Type',''])hr.append(this.el('th',h));
 		thead.append(hr);table.append(thead);
-		const tbody=this.el('tbody');
-		if(!this.connected.length){
-			const tr=this.el('tr');const td=this.el('td','No devices are currently connected.','page-note');td.colSpan=7;tr.append(td);tbody.append(tr);
-		}
-		for(const dev of this.connected){
-			const tr=this.el('tr');
-			const name=dev.hostname||'Unknown device';
-			const res=resByMac.get(normMac(dev.macaddr));
-			const nameCell=this.el('td');nameCell.append(this.el('span',name,'dev-name'),this.el('span',dev.macaddr,'dev-mono dev-res-meta'));
-			const profile=this.profileForIp(dev.ipaddr);
-			tr.append(nameCell,this.el('td',this.vendorForMac(dev.macaddr)),this.el('td',dev.ipaddr,'dev-mono'),
-				this.el('td',profile),this.el('td',dev.expires>0?this.fmtLease(dev.expires):'—'));
-			const typeCell=this.el('td');
-			const typeLabel=dev.isStatic?'Static':(dev.hasLease?'DHCP':'Other');
-			typeCell.append(this.el('span',typeLabel,'dev-badge '+(dev.isStatic?'static':'dynamic')));
-			tr.append(typeCell);
-			const act=this.el('td');
-			if(res){
-				const b=this.el('button','Reserved','dev-action');b.type='button';b.disabled=true;act.append(b);
-			}else{
-				const b=this.el('button','Make static','dev-action');b.type='button';
-				b.addEventListener('click',()=>this.makeStatic(dev));
-				act.append(b);
+		const tbody=this.el('tbody');table.append(tbody);root.append(table);
+		const renderRows=()=>{
+			const q=(search.value||'').trim().toLowerCase();
+			const list=this.connected.filter(d=>!q||(d.hostname||'').toLowerCase().includes(q)||d.ipaddr.toLowerCase().includes(q)||normMac(d.macaddr).includes(q));
+			count.textContent=list.length+' of '+this.connected.length+' devices';
+			tbody.replaceChildren();
+			if(!list.length){
+				const tr=this.el('tr');const td=this.el('td',this.connected.length?'No devices match your search.':'No devices are currently connected.','page-note');td.colSpan=7;tr.append(td);tbody.append(tr);return;
 			}
-			const perm=this.el('button','Permissions','dev-action');perm.type='button';
-			perm.addEventListener('click',()=>this.showPermissions(dev,profile));
-			act.append(perm);
-			tr.append(act);tbody.append(tr);
-		}
-		table.append(tbody);root.append(table);
+			for(const dev of list){
+				const tr=this.el('tr');
+				const name=dev.hostname||'Unknown device';
+				const res=resByMac.get(normMac(dev.macaddr));
+				const nameCell=this.el('td');
+				const identity=this.el('div',undefined,'dev-identity');
+				identity.append(this.el('span',name,'dev-name'),this.el('span',dev.macaddr,'dev-mono dev-res-meta'));
+				nameCell.append(identity);
+				const profile=this.profileForIp(dev.ipaddr);
+				tr.append(nameCell,this.el('td',this.vendorForMac(dev.macaddr)),this.el('td',dev.ipaddr,'dev-mono'),
+					this.el('td',profile),this.el('td',dev.expires>0?this.fmtLease(dev.expires):'—'));
+				const typeCell=this.el('td');
+				const typeLabel=dev.isStatic?'Static':(dev.hasLease?'DHCP':'Other');
+				typeCell.append(this.el('span',typeLabel,'dev-badge '+(dev.isStatic?'static':'dynamic')));
+				tr.append(typeCell);
+				const act=this.el('td');
+				const row=this.el('div',undefined,'action-row');
+				if(res){
+					const b=this.el('button','Reserved','dev-action');b.type='button';b.disabled=true;row.append(b);
+				}else{
+					const b=this.el('button','Make static','dev-action');b.type='button';
+					b.addEventListener('click',()=>this.makeStatic(dev));
+					row.append(b);
+				}
+				const perm=this.el('button','Permissions','dev-action');perm.type='button';
+				perm.addEventListener('click',()=>this.showPermissions(dev,profile));
+				row.append(perm);
+				act.append(row);tr.append(act);tbody.append(tr);
+			}
+		};
+		search.addEventListener('input',renderRows);
+		renderRows();
 
 		// Static reservations
 		root.append(this.el('h3','Static IP reservations'));
@@ -198,27 +213,44 @@ export default class DevicesModule{
 	}
 	showPermissions(lease,profile){
 		document.querySelector('.dev-modal-overlay')?.remove();
+		const trigger=document.activeElement;
 		const overlay=this.el('div',undefined,'dev-modal-overlay');
 		const card=this.el('div',undefined,'dev-modal stat-card');
+		card.setAttribute('role','dialog');
+		card.setAttribute('aria-modal','true');
+		card.setAttribute('aria-labelledby','dev-perm-title');
 		const head=this.el('div',undefined,'dev-modal-head');
-		head.append(this.el('h3',lease.hostname||'Device permissions'));
-		const close=this.el('button','CLOSE','dev-action');close.type='button';
-		close.addEventListener('click',()=>overlay.remove());
-		head.append(close);
-		const meta=this.el('p',vendorForMac(lease.macaddr)+'  ·  '+lease.ipaddr+'  ·  profile: '+profile,'page-note');
+		const title=this.el('h3',lease.hostname||'Device permissions');title.id='dev-perm-title';
+		const close=this.el('button','Close','dev-action');close.type='button';
+		head.append(title,close);
+		const meta=this.el('p',this.vendorForMac(lease.macaddr)+'  ·  '+lease.ipaddr+'  ·  profile: '+profile,'page-note');
 		const note=this.el('p','Permissions are opt-in and off by default. Delegate an inbound port to this device, or publish a DNS name for it. Profile-wide internet, DNS and LAN access are managed on the Security Profiles page.','page-note');
 		const actions=this.el('div',undefined,'dev-modal-actions');
 		const port=this.el('button','Delegate a port','action-btn');port.type='button';
-		port.addEventListener('click',()=>{overlay.remove();this.core.navigate('/published-ports');});
 		const dns=this.el('button','Publish a DNS name','action-btn');dns.type='button';
-		dns.addEventListener('click',()=>{overlay.remove();this.core.navigate('/network/dns');});
 		const prof=this.el('button','Manage profile access','action-btn');prof.type='button';
-		prof.addEventListener('click',()=>{overlay.remove();this.core.navigate('/profiles');});
 		actions.append(port,dns,prof);
 		card.append(head,meta,note,actions);
 		overlay.append(card);
-		overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
+		const closeDialog=()=>{overlay.remove();document.removeEventListener('keydown',onKey);if(trigger&&trigger.focus)trigger.focus();};
+		const onKey=e=>{
+			if(e.key==='Escape'){e.preventDefault();closeDialog();return;}
+			if(e.key==='Tab'){
+				const f=[...card.querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])')];
+				if(!f.length)return;
+				const first=f[0],last=f[f.length-1];
+				if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+				else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+			}
+		};
+		close.addEventListener('click',closeDialog);
+		overlay.addEventListener('click',e=>{if(e.target===overlay)closeDialog();});
+		port.addEventListener('click',()=>{closeDialog();this.core.navigate('/published-ports');});
+		dns.addEventListener('click',()=>{closeDialog();this.core.navigate('/network/dns');});
+		prof.addEventListener('click',()=>{closeDialog();this.core.navigate('/profiles');});
+		document.addEventListener('keydown',onKey);
 		document.body.append(overlay);
+		close.focus();
 	}
 	input(id,ph,type){const i=this.el('input');i.id=id;i.type=type;i.placeholder=ph;i.className='form-input';i.autocomplete='off';return i;}
 	field(label,input){const w=this.el('label',undefined,'wan-field');w.append(this.el('span',label,'wan-field-label'),input);return w;}

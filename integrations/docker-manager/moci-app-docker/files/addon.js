@@ -20,6 +20,23 @@ export default class ApplicationsAddon {
     return data;
   }
   esc(x) { return this.core.escapeHtml(String(x ?? '')); }
+  emptyMessage(view) {
+    return {
+      containers: 'No containers found. Deploy an app from the App Store to get started.',
+      stacks: 'No Compose projects found. Externally discovered projects and Haven-managed stacks appear here.',
+      images: 'No images found. Images are pulled when you deploy an app.',
+      volumes: 'No volumes found. Volumes persist application data across container restarts.',
+      networks: 'No Docker networks found.',
+      storage: 'No storage mounts detected.'
+    }[view] || 'Nothing to display yet.';
+  }
+  fmtBytes(n) {
+    n = Number(n);
+    if (!Number.isFinite(n)) return '—';
+    const u = ['B', 'KiB', 'MiB', 'GiB', 'TiB']; let i = 0;
+    while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+    return (i === 0 ? String(n) : n.toFixed(1)) + ' ' + u[i];
+  }
   async render() {
     this.page = document.getElementById('addon-docker-page');
     if (!this.page) return;
@@ -62,6 +79,7 @@ export default class ApplicationsAddon {
     const root = this.page.querySelector('#docker-content');
     if (!root) return;
     this.active = view;
+    this.page.querySelectorAll('[data-view]').forEach(b=>{const on=b.dataset.view===view;b.classList.toggle('active',on);b.setAttribute('aria-pressed',on?'true':'false');});
     root.textContent='Loading…';
     try {
       const result=await this.rpc(view);
@@ -76,7 +94,8 @@ export default class ApplicationsAddon {
       if(view==='managed_stacks') return this.renderManaged(root,result.managed_stacks||[],result.lan_firewall);
       const rows=result[view]||[];
       const data=rows.map(v=>typeof v==='string'?{Name:v}:v);
-      if(!data.length){root.innerHTML='<p class="docker-empty">Nothing to display yet.</p>';return;}
+      if(!data.length){const p=document.createElement('p');p.className='docker-empty';p.textContent=this.emptyMessage(view);root.replaceChildren(p);return;}
+      if(view==='storage'){for(const item of data){for(const k of ['Total','Used','Free'])item[k]=this.fmtBytes(item[k]);}}
       const keys=view==='containers'?['Names','Image','State','Status']:view==='stacks'?['Name','Containers']:view==='images'?['Tags','Size']:view==='volumes'?['Name','Driver']:view==='networks'?['Name','Driver']:['Mount','Total','Used','Free'];
       root.innerHTML=`<div class="docker-scroll"><table class="data-table"><thead><tr>${keys.map(k=>`<th>${k}</th>`).join('')}${['containers','volumes','networks','images'].includes(view)?'<th>Actions</th>':''}</tr></thead><tbody>
         ${data.map(item=>`<tr>${keys.map(k=>`<td>${this.esc(Array.isArray(item[k])?item[k].join(', '):item[k])}</td>`).join('')}${view==='containers'?`<td><button class="action-btn" data-log="${this.esc(item.Id)}">Logs</button><button class="action-btn" data-stats="${this.esc(item.Id)}">Statistics</button>${!this.readOnly&&item.Managed?['start','stop','restart','remove'].map(action=>`<button class="action-btn" data-container-action="${action}" data-id="${this.esc(item.Id)}">${action}</button>`).join(''):''} </td>`:view==='volumes'&&!this.readOnly?`<td>${String(item.Name||'').startsWith('moci-')?`<button class="action-btn" data-resource-action="volume_action" data-id="${this.esc(item.Name)}">Remove</button>`:'Protected'}</td>`:view==='networks'&&!this.readOnly?`<td>${String(item.Name||'').startsWith('moci-')?`<button class="action-btn" data-resource-action="network_action" data-id="${this.esc(item.Name)}">Remove</button>`:'Protected'}</td>`:view==='images'&&!this.readOnly?`<td><button class="action-btn" data-resource-action="image_action" data-id="${this.esc(item.Id)}">Remove unused</button></td>`:['volumes','networks','images'].includes(view)?'<td>Read only</td>':''}</tr>`).join('')}

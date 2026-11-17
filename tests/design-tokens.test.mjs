@@ -35,7 +35,7 @@ for (const sel of ['.stat-label', '.data-table td', '.action-btn', '.hero-detail
 // 4. The legacy dashboard noise is gone from the markup.
 assert(!html.includes('hero-indicator'), 'Pulsing hero dot should be removed');
 assert(!html.includes('NETWORK ACTIVITY (60s)'), 'Mislabelled 60s graph should be gone');
-assert(html.includes('Last 3 min'), 'Honest 3-minute graph window present');
+assert(html.includes('last 3 min') && html.includes('Mbps'), 'Honest 3-minute graph window with unit present');
 assert(html.includes('Needs attention'), 'Attention panel present');
 assert(!/var\(--(neon|slate)-|var\(--steel-light|var\(--error-red/.test(html), 'index.html still references dead tokens');
 

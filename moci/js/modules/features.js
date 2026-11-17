@@ -70,9 +70,13 @@ export default class FeaturesModule{
 	}
 	statusFor(a){
 		const {installed,bootEnabled,services}=this.status;
-		if(!installed.has(a.service))return {label:'NOT INSTALLED',variant:'info',running:false,installed:false,boot:false};
+		if(!installed.has(a.service))return {label:'Not installed',variant:'info',running:false,installed:false,boot:false};
 		const running=this.isRunning(services,a.service);
-		return {label:running?'RUNNING':'STOPPED',variant:running?'success':'error',running,installed:true,boot:bootEnabled.has(a.service)};
+		const boot=bootEnabled.has(a.service);
+		if(running)return {label:'Running',variant:'success',running,installed:true,boot};
+		// Intentionally disabled is a neutral "Off", not a failure.
+		if(!this.core.isFeatureEnabled(a.key))return {label:'Off',variant:'neutral',running:false,installed:true,boot};
+		return {label:'Stopped',variant:'warning',running:false,installed:true,boot};
 	}
 	render(){
 		const esc=t=>this.core.escapeHtml(t);
@@ -100,7 +104,7 @@ export default class FeaturesModule{
 						</div>
 					</div>
 					<div class="addon-card-actions" style="align-items:center">
-						${on?`<a class="action-btn" href="#${a.route}">OPEN</a>`:''}
+						${on?`<a class="action-btn" href="#${a.route}">Open</a>`:''}
 						<label class="feature-switch" title="${on?'Turn off':'Turn on'} ${esc(a.name)}">
 							<input type="checkbox" data-feature-key="${a.key}" ${on?'checked':''} ${busy?'disabled':''}
 								aria-label="Toggle ${esc(a.name)}">

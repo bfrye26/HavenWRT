@@ -259,11 +259,7 @@ export default class UpnpModule {
       line.append(revoke);list.append(line);
     }
     root.append(list);
-    const form=this.el('form',undefined,'profiles-allow-form');
-    const ip=this.el('input');ip.placeholder='Trusted device IPv4 (e.g. 192.168.50.40)';ip.required=true;ip.maxLength=15;
-    ip.setAttribute('aria-label','Delegated device IPv4');
-    const add=this.el('button','DELEGATE DEVICE','action-btn');add.type='submit';
-    form.append(ip,add);
+    const {form,input:ip,button:add}=this.core.deviceAddressForm({label:'Trusted device IPv4',placeholder:'e.g. 192.168.50.40',buttonText:'Delegate device'});
     form.addEventListener('submit',e=>{e.preventDefault();this.addDelegation(ip.value.trim(),add);});
     root.append(form);
   }

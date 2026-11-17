@@ -10,6 +10,8 @@
 .docker-compose input,.docker-compose textarea{background:var(--theme-input);color:var(--starship-steel);border:1px solid var(--glass-border)}
 .docker-app-warning{color:var(--warning-amber)}
 .docker-result-count{color:var(--steel-muted)}
+.docker-nav .action-btn.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600}
+.docker-scroll td.num{text-align:right;font-variant-numeric:tabular-nums}
 :root[data-theme="cloud"] .docker-hero{
   background:linear-gradient(115deg,#eff5ff 0%,#ffffff 100%);
   border:1px solid #d5e2f1;border-radius:12px;

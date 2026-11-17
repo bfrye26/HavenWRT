@@ -14,7 +14,7 @@
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="black" />
 		<link rel="apple-touch-icon" href="icons/icon-192.png" />
-		<link rel="stylesheet" href="app.css?v=1.0.0r4" />
+		<link rel="stylesheet" href="app.css?v=1.0.0r5" />
 	</head>
 	<body>
 		<div id="app">
@@ -256,7 +256,7 @@
 
 						<div class="dash-main">
 							<section class="stat-card">
-								<div class="card-head"><h2>Throughput</h2><span class="range-pill">Last 3 min</span></div>
+								<div class="card-head"><h2>Throughput</h2><span class="range-pill">Mbps &middot; last 3 min</span></div>
 								<svg class="dash-graph" id="dash-graph" viewBox="0 0 640 230" role="img" aria-label="Network throughput over the last 3 minutes"></svg>
 								<div class="dash-legend">
 									<span><span class="swatch" style="background:var(--accent)"></span>Download</span>
@@ -2032,16 +2032,16 @@
 
 						<div class="tab-content hidden" id="tab-diagnostics">
 							<div class="stat-card">
-								<div class="section-title">ACTIVE CONNECTIONS</div>
-								<table class="data-table" id="connections-table">
-									<thead>
-										<tr>
-											<th>IP ADDRESS</th>
-											<th>MAC ADDRESS</th>
-											<th>HOSTNAME</th>
-											<th>STATUS</th>
-										</tr>
-									</thead>
+							<div class="section-title">Connected clients</div>
+							<table class="data-table" id="connections-table">
+								<thead>
+									<tr>
+										<th>IP address</th>
+										<th>MAC address</th>
+										<th>Hostname</th>
+										<th>Lease</th>
+									</tr>
+								</thead>
 									<tbody>
 										<tr>
 											<td colspan="4" style="text-align: center; color: var(--steel-muted)">
@@ -2579,7 +2579,7 @@
 		</div>
 
 		<script type="module">
-			import { OpenWrtCore } from './js/core.js?v=1.0.0r4';
+			import { OpenWrtCore } from './js/core.js?v=1.0.0r5';
 			window.app = new OpenWrtCore();
 			window.app.init();
 		</script>

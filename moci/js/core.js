@@ -1,6 +1,6 @@
 // Bump on every frontend release so browsers fetch fresh modules instead of a
 // stale cached bundle. Kept in sync with the query strings in index.html.
-const ASSET_VER = '1.0.0r4';
+const ASSET_VER = '1.0.0r5';
 
 export class OpenWrtCore {
 	constructor() {
@@ -1046,6 +1046,35 @@ export class OpenWrtCore {
 		return div.innerHTML;
 	}
 
+	// Shared styled IPv4 address field + submit button row (visible label, form-input,
+	// responsive). Caller wires the submit handler; validation stays with the caller.
+	deviceAddressForm({ label, placeholder = '', buttonText = 'Add', describedBy = null }) {
+		const form = document.createElement('form');
+		form.className = 'device-address-form';
+		const field = document.createElement('label');
+		field.className = 'wan-field';
+		const labelText = document.createElement('span');
+		labelText.className = 'wan-field-label';
+		labelText.textContent = label;
+		const input = document.createElement('input');
+		input.type = 'text';
+		input.className = 'form-input';
+		input.placeholder = placeholder;
+		input.required = true;
+		input.maxLength = 15;
+		input.autocomplete = 'off';
+		input.inputMode = 'decimal';
+		input.setAttribute('aria-label', label);
+		if (describedBy) input.setAttribute('aria-describedby', describedBy);
+		field.append(labelText, input);
+		const button = document.createElement('button');
+		button.type = 'submit';
+		button.className = 'action-btn';
+		button.textContent = buttonText;
+		form.append(field, button);
+		return { form, input, button };
+	}
+
 	setupSubTabs(pageId, loadHandlers) {
 		const listeners = [];
 
@@ -1110,7 +1139,22 @@ export class OpenWrtCore {
 		} catch (err) {
 			console.error(`Failed to load ${tableId}:`, err);
 			const tbody = document.querySelector(`#${tableId} tbody`);
-			if (tbody) this.renderEmptyTable(tbody, colspan, 'Failed to load data');
+			if (tbody) {
+				tbody.replaceChildren();
+				const tr = document.createElement('tr');
+				const td = document.createElement('td');
+				td.colSpan = colspan;
+				td.className = 'table-error';
+				td.textContent = 'Could not load data: ' + (err?.message || 'request failed') + ' ';
+				const retry = document.createElement('button');
+				retry.type = 'button';
+				retry.className = 'action-btn-sm';
+				retry.textContent = 'Retry';
+				retry.addEventListener('click', () => this.loadResource(tableId, colspan, feature, fetcher));
+				td.appendChild(retry);
+				tr.appendChild(td);
+				tbody.appendChild(tr);
+			}
 		} finally {
 			this.hideSkeleton(tableId);
 		}
@@ -1190,7 +1234,7 @@ export class OpenWrtCore {
 		}
 		for (const id of ids) {
 			try {
-				const resp = await fetch(`/moci/js/addons/${id}/manifest.json`);
+				const resp = await fetch(`/moci/js/addons/${id}/manifest.json?v=${ASSET_VER}`);
 				if (!resp.ok) continue;
 				const manifest = await resp.json();
 				this.addonManifests.set(id, manifest);
@@ -1206,7 +1250,7 @@ export class OpenWrtCore {
 		if (this.addons.has(id)) return this.addons.get(id);
 		if (!/^[a-zA-Z0-9_-]+$/.test(id)) return null;
 		try {
-			const module = await import(`./addons/${id}/addon.js`);
+			const module = await import(`./addons/${id}/addon.js?v=${ASSET_VER}`);
 			const instance = new module.default(this);
 			if (typeof instance.init === 'function') await instance.init();
 			this.addons.set(id, instance);
@@ -1245,7 +1289,7 @@ export class OpenWrtCore {
 		if (document.querySelector(`link[data-addon="${id}"]`)) return;
 		const link = document.createElement('link');
 		link.rel = 'stylesheet';
-		link.href = `/moci/js/addons/${id}/${manifest.css}`;
+		link.href = `/moci/js/addons/${id}/${manifest.css}?v=${ASSET_VER}`;
 		link.setAttribute('data-addon', id);
 		document.head.appendChild(link);
 	}

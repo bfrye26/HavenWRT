@@ -321,9 +321,6 @@ export default class DashboardModule {
 			lbl.textContent = val >= 1 ? val.toFixed(0) : val.toFixed(1);
 			svg.append(lbl);
 		}
-		const unit = this.svgEl('text', { x: 14, y: T + 4, fill: muted, 'font-size': '9' });
-		unit.textContent = 'Mbps';
-		svg.append(unit);
 		const n = down.length;
 		const xAt = i => L + (i + (HISTORY_LEN - n)) / (HISTORY_LEN - 1) * (W - L - R);
 		const dPath = down.map((v, i) => (i ? 'L' : 'M') + xAt(i).toFixed(1) + ' ' + Y(v / 1000).toFixed(1)).join(' ');
