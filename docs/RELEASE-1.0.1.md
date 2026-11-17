@@ -8,11 +8,11 @@ validation was changed.
 Built on OpenWrt **v25.12.6**.
 
 **Firmware image SHA-256:**
-`IMAGE_HASH_PLACEHOLDER`
+`81230610b49c5b9037bfed5e282505faca6413efa71f3e3c1bae55d66e21b791`
 (`openwrt-x86-64-generic-ext4-combined-efi.img.gz`)
 
 **Installer ISO SHA-256 (dual-boot BIOS + UEFI):**
-`ISO_HASH_PLACEHOLDER`
+`bc6a4ef27052fc6516869864188ccba890383139ff3821e3a99c4deccc575431`
 (`MoCI-x86-64-Installer.iso`)
 
 ## Fixes
