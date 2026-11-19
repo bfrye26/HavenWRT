@@ -3,18 +3,36 @@
 # - CPU governor "performance": lock cores at max frequency so routing/softirq
 #   throughput does not dip while the scheduler ramps frequency.
 # - Larger NIC ring buffers: absorb bursts and cut RX drops on the I225-V ports.
+# - XPS (TX steering): map each TX queue to its core, matching the balanced RX IRQ
+#   affinity so TX completions stay on the same core (less cross-core traffic).
+# - netdev backlog/budget: larger per-CPU input queue + more packets per softirq
+#   cycle for high packet rates.
 # Flow offload / packet steering / irqbalance are UCI settings handled by
 # /etc/uci-defaults/98-moci-performance (persisted in /etc/config).
 START=99
 
 start() {
-	local g i
+	local g i q n ncpu mask
 	for g in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
 		[ -w "$g" ] && echo performance > "$g" 2>/dev/null
 	done
 	for i in eth0 eth1 eth2 eth3 eth4 eth5; do
-		[ -d "/sys/class/net/$i" ] && ethtool -G "$i" rx 2048 tx 2048 2>/dev/null
+		[ -d "/sys/class/net/$i" ] || continue
+		ethtool -G "$i" rx 2048 tx 2048 2>/dev/null
 	done
+	ncpu=$(grep -c ^processor /proc/cpuinfo 2>/dev/null)
+	[ "${ncpu:-0}" -gt 0 ] || ncpu=1
+	for i in eth0 eth1 eth2 eth3 eth4 eth5; do
+		[ -d "/sys/class/net/$i" ] || continue
+		n=0
+		for q in /sys/class/net/$i/queues/tx-*/xps_cpus; do
+			[ -w "$q" ] || continue
+			mask=$(printf '%x' $((1 << (n % ncpu))))
+			echo "$mask" > "$q" 2>/dev/null
+			n=$((n + 1))
+		done
+	done
+	sysctl -w net.core.netdev_max_backlog=8192 net.core.netdev_budget=600 >/dev/null 2>&1
 }
 
 reload() {
