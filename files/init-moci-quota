@@ -2,7 +2,9 @@
 # Installs the per-device bandwidth quota cron job (every 5 minutes).
 START=98
 STOP=10
-USE_PROCD=0
+# No USE_PROCD: this is a classic init script with a custom start(). Setting
+# USE_PROCD=0 would still trip rc.common's `[ -n "$USE_PROCD" ]` procd branch
+# ("0" is non-empty) and clobber start(), so the cron job would never install.
 CRON='/usr/sbin/moci-quota'
 start() {
   mkdir -p /etc/crontabs

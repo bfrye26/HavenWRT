@@ -1,7 +1,9 @@
 #!/bin/sh /etc/rc.common
 START=97
 STOP=10
-USE_PROCD=0
+# No USE_PROCD: classic init script with a custom start(). USE_PROCD=0 would
+# still trip rc.common's `[ -n "$USE_PROCD" ]` procd branch and clobber start(),
+# so the cron job would never install.
 CRON='/usr/sbin/moci-wifi-scheduler'
 start() {
   mkdir -p /etc/crontabs
