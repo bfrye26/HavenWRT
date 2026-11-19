@@ -22,7 +22,8 @@ const FW_RULE_FIELDS = {
 	'edit-fw-rule-dest': 'dest',
 	'edit-fw-rule-proto': 'proto',
 	'edit-fw-rule-dest-port': 'dest_port',
-	'edit-fw-rule-src-ip': 'src_ip'
+	'edit-fw-rule-src-ip': 'src_ip',
+	'edit-fw-rule-src-mac': 'src_mac'
 };
 
 const NAT_FIELDS = {
@@ -106,7 +107,7 @@ export default class NetworkModule {
 
 	async loadUpnp(){
 		if(!this.upnp){
-			const {default: UpnpModule}=await import('./upnp.js?v=1.0.3r1');
+			const {default: UpnpModule}=await import('./upnp.js?v=1.1.0r1');
 			this.upnp=new UpnpModule(this.core);
 		}
 		await this.upnp.load(document.getElementById('tab-upnp'));
@@ -1822,44 +1823,10 @@ export default class NetworkModule {
 	}
 
 	async loadQoS() {
-		await this.core.loadResource('qos-rules-table', 6, 'qos', async () => {
-			let status, result;
-			try {
-				[status, result] = await this.core.uciGet('qos');
-			} catch (err) {
-				throw err; // transport/RPC failure -> error state with Retry
-			}
-			if (status !== 0 || !result?.values) {
-				// Classic QoS config is optional; an absent/empty config is a valid empty state.
-				this.core.renderTable('#qos-rules-table', [], 6, 'No classification rules configured.', () => '');
-				return;
-			}
-			const config = result.values;
-
-			const iface = Object.entries(config).find(([, v]) => v['.type'] === 'interface');
-			if (iface) {
-				const el = id => document.getElementById(id);
-				el('qos-enabled').value = iface[1].enabled || '0';
-				el('qos-download').value = iface[1].download || '';
-				el('qos-upload').value = iface[1].upload || '';
-			}
-
-			const rules = this.core.filterUciSections(config, 'classify');
-			this.core.renderTable(
-				'#qos-rules-table',
-				rules,
-				6,
-				'No QoS rules',
-				r => `<tr>
-				<td>${this.core.escapeHtml(r.section)}</td>
-				<td>${this.core.escapeHtml(r.target || 'Normal')}</td>
-				<td>${this.core.escapeHtml(r.proto || 'Any')}</td>
-				<td>${this.core.escapeHtml(r.ports || 'Any')}</td>
-				<td>${this.core.escapeHtml(r.srchost || 'Any')}</td>
-				<td>${this.core.renderActionButtons(r.section)}</td>
-			</tr>`
-			);
-		});
+		// Classic qos-scripts classification is not shipped; SQM (cake/fq_codel) is
+		// the supported QoS. Redirect this legacy tab to the dedicated SQM page so
+		// users never edit a config whose package is absent.
+		this.core.navigate('/qos');
 	}
 
 	async saveQoSConfig() {

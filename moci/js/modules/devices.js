@@ -32,7 +32,7 @@ export default class DevicesModule{
 				this.uci('get',{config:'network'}).catch(()=>({values:{}})),
 				this.uci('get',{config:'firewall'}).catch(()=>({values:{}})),
 				this.rpc('file','read',{path:'/proc/net/arp'}).catch(()=>({data:''})),
-				import('./oui-data.js?v=1.0.3r1').then(m=>m.default).catch(()=>({}))
+				import('./oui-data.js?v=1.1.0r1').then(m=>m.default).catch(()=>({}))
 			]);
 			this.oui=oui||{};
 			this.leases=Array.isArray(leases.dhcp_leases)?leases.dhcp_leases:[];
@@ -45,6 +45,97 @@ export default class DevicesModule{
 		}catch(e){this.root.replaceChildren(this.el('p','Unable to read devices: '+e.message,'page-error'));}
 	}
 	resForMac(mac){return this.reservations.find(([,v])=>normMac(v.mac)===normMac(mac));}
+	// Internet pause = one named firewall REJECT rule keyed by MAC (survives IP changes).
+	blockRuleForMac(mac){
+		const name='moci_block_'+normMac(mac);
+		return Object.entries(this.firewall||{}).find(([,v])=>v?.['.type']==='rule'&&v.name===name)||null;
+	}
+	isBlocked(mac){
+		const r=this.blockRuleForMac(mac);
+		return !!(r&&r[1].enabled!=='0'&&String(r[1].target||'').toUpperCase()==='REJECT');
+	}
+	isQuotaBlocked(mac){
+		const name='moci_quota_'+normMac(mac);
+		const r=Object.entries(this.firewall||{}).find(([,v])=>v?.['.type']==='rule'&&v.name===name);
+		return !!(r&&r[1].enabled!=='0'&&String(r[1].target||'').toUpperCase()==='REJECT');
+	}
+	async toggleBlock(dev){
+		if(this.busy)return;
+		const mac=normMac(dev.macaddr);
+		if(!MAC.test(mac)){this.core.showToast('This device has no usable MAC address to pause','error');return;}
+		this.busy=true;
+		try{
+			const existing=this.blockRuleForMac(mac);
+			if(existing){
+				await this.core.uciDelete('firewall',existing[0]);
+				await this.core.uciApplyConfig('firewall');
+				this.core.showToast('Internet access restored','success');
+			}else{
+				const [,res]=await this.core.uciAdd('firewall','rule');
+				if(!res?.section)throw new Error('Failed to create rule');
+				await this.core.uciSet('firewall',res.section,{name:'moci_block_'+mac,src:'lan',src_mac:mac,dest:'wan',proto:'all',target:'REJECT',enabled:'1'});
+				await this.core.uciApplyConfig('firewall');
+				this.core.showToast('Internet paused for this device','success');
+			}
+			await this.show();
+		}catch(e){
+			this.core.showToast('Could not change device access: '+e.message,'error');
+		}finally{this.busy=false;}
+	}
+	async showQuota(dev){
+		document.querySelector('.dev-modal-overlay')?.remove();
+		const mac=normMac(dev.macaddr);
+		const trigger=document.activeElement;
+		let quotaCfg={};let usage=null;let existing=null;
+		try{const [s,r]=await this.core.uciGet('moci_quota');if(s===0&&r?.values){quotaCfg=r.values;existing=Object.entries(quotaCfg).find(([,v])=>v?.['.type']==='device'&&normMac(v.mac)===mac)||null;}}catch{}
+		try{
+			const [s,r]=await this.core.ubusCall('file','exec',{command:'/usr/libexec/nlbwmon-action',params:['download','-f','json']},{timeout:30000});
+			if(s===0&&r?.code===0){const obj=JSON.parse(r.stdout);const idx={};(obj.columns||[]).forEach((c,i)=>idx[c]=i);let tot=0;for(const row of obj.data||[]){if(normMac(row[idx.mac])===mac)tot+=(Number(row[idx.rx_bytes])||0)+(Number(row[idx.tx_bytes])||0);}usage=tot;}
+		}catch{}
+		const overlay=this.el('div',undefined,'dev-modal-overlay');
+		const card=this.el('div',undefined,'dev-modal stat-card');
+		card.setAttribute('role','dialog');card.setAttribute('aria-modal','true');card.setAttribute('aria-labelledby','dev-quota-title');
+		const head=this.el('div',undefined,'dev-modal-head');
+		const title=this.el('h3','Daily quota — '+(dev.hostname||dev.ipaddr));title.id='dev-quota-title';
+		const close=this.el('button','Close','dev-action');close.type='button';
+		head.append(title,close);
+		const body=this.el('div',undefined,'dev-modal-body');
+		body.append(this.el('p','Cap this device’s internet usage per day. When the cap is reached it is paused until the next day. Enforcement runs every few minutes and requires Bandwidth Monitor (nlbwmon).','page-note'));
+		if(usage!=null)body.append(this.el('p','Used today (approx.): '+this.core.formatBytes(usage),'page-note'));
+		const capInput=this.el('input');capInput.type='number';capInput.min='1';capInput.className='form-input';capInput.placeholder='e.g. 2048';capInput.value=existing?(existing[1].limit_mb||''):'';
+		const capField=this.el('label',undefined,'advanced-field');capField.append(this.el('span','Daily cap (MB)'),capInput);
+		const enCheck=this.el('input');enCheck.type='checkbox';enCheck.checked=existing?existing[1].enabled!=='0':true;
+		const enLabel=this.el('label',undefined,'profiles-check');enLabel.append(enCheck,this.el('span','Enable quota'));
+		body.append(capField,enLabel);
+		const foot=this.el('div',undefined,'dev-modal-foot');
+		const remove=this.el('button','Remove','dev-action danger');remove.type='button';
+		const save=this.el('button','SAVE QUOTA','action-btn');save.type='button';
+		foot.append(remove,save);
+		card.append(head,body,foot);overlay.append(card);document.body.append(overlay);
+		const dismiss=()=>{overlay.remove();trigger?.focus?.();};
+		close.addEventListener('click',dismiss);
+		overlay.addEventListener('click',e=>{if(e.target===overlay)dismiss();});
+		remove.addEventListener('click',async()=>{
+			try{if(existing){await this.core.uciDelete('moci_quota',existing[0]);await this.core.uciCommit('moci_quota');}this.core.showToast('Quota removed','success');dismiss();await this.show();}
+			catch(e){this.core.showToast('Could not remove quota: '+e.message,'error');}
+		});
+		save.addEventListener('click',async()=>{
+			const mb=Number(capInput.value);
+			if(!Number.isFinite(mb)||mb<=0){this.core.showToast('Enter a daily cap in MB','error');return;}
+			save.disabled=true;
+			try{
+				let sec=existing?existing[0]:null;
+				if(!sec){const [,res]=await this.core.uciAdd('moci_quota','device');sec=res?.section;if(!sec)throw new Error('create failed');}
+				await this.core.uciSet('moci_quota',sec,{mac:mac,limit_mb:String(mb),enabled:enCheck.checked?'1':'0'});
+				await this.core.uciSet('moci_quota','settings',{enabled:'1'});
+				await this.core.uciCommit('moci_quota');
+				await this.core.ubusCall('file','exec',{command:'/etc/init.d/nlbwmon',params:['enable']},{timeout:15000}).catch(()=>{});
+				await this.core.ubusCall('file','exec',{command:'/etc/init.d/nlbwmon',params:['start']},{timeout:15000}).catch(()=>{});
+				this.core.showToast('Quota saved','success');dismiss();await this.show();
+			}catch(e){this.core.showToast('Could not save quota: '+e.message,'error');save.disabled=false;}
+		});
+		capInput.focus();
+	}
 	vendorForMac(mac){
 		const p=normMac(mac).split(':').slice(0,3).join(':');
 		if(LOCAL_OUI[p])return LOCAL_OUI[p];
@@ -137,6 +228,7 @@ export default class DevicesModule{
 				const tr=this.el('tr');
 				const name=dev.hostname||'Unknown device';
 				const res=resByMac.get(normMac(dev.macaddr));
+				const blocked=this.isBlocked(dev.macaddr);
 				const nameCell=this.el('td');
 				const identity=this.el('div',undefined,'dev-identity');
 				identity.append(this.el('span',name,'dev-name'),this.el('span',dev.macaddr,'dev-mono dev-res-meta'));
@@ -147,6 +239,8 @@ export default class DevicesModule{
 				const typeCell=this.el('td');
 				const typeLabel=dev.isStatic?'Static':(dev.hasLease?'DHCP':'Other');
 				typeCell.append(this.el('span',typeLabel,'dev-badge '+(dev.isStatic?'static':'dynamic')));
+				if(blocked)typeCell.append(this.el('span','Paused','dev-badge dynamic'));
+				if(this.isQuotaBlocked(dev.macaddr))typeCell.append(this.el('span','Quota paused','dev-badge dynamic'));
 				tr.append(typeCell);
 				const act=this.el('td');
 				const row=this.el('div',undefined,'action-row');
@@ -157,6 +251,14 @@ export default class DevicesModule{
 					b.addEventListener('click',()=>this.makeStatic(dev));
 					row.append(b);
 				}
+				const pause=this.el('button',blocked?'Resume':'Pause','dev-action'+(blocked?'':' danger'));pause.type='button';
+				pause.title=blocked?'Restore internet access for this device':'Cut internet access for this device';
+				pause.addEventListener('click',()=>this.toggleBlock(dev));
+				row.append(pause);
+				const quota=this.el('button','Quota','dev-action');quota.type='button';
+				quota.title='Set a daily bandwidth cap for this device';
+				quota.addEventListener('click',()=>this.showQuota(dev));
+				row.append(quota);
 				const perm=this.el('button','Permissions','dev-action');perm.type='button';
 				perm.addEventListener('click',()=>this.showPermissions(dev,profile));
 				row.append(perm);

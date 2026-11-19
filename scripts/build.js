@@ -33,6 +33,7 @@ async function buildJS() {
 		'moci/js/modules/features.js',
 		'moci/js/modules/bandwidth.js',
 		'moci/js/modules/multiwan.js',
+		'moci/js/modules/securedns.js',
 		'moci/js/modules/adblock.js',
 		'moci/js/modules/tailscale.js',
 		'moci/js/modules/terminal.js',

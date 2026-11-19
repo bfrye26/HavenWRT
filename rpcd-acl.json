@@ -185,6 +185,7 @@
         "fstab",
         "rpcd",
         "moci_wifi_schedule",
+        "moci_quota",
         "smartdns",
         "watchcat",
         "vnstat",
@@ -240,6 +241,9 @@
         "/tmp/firmware.bin.sig": [
           "write"
         ],
+        "/tmp/restore.tar.gz": [
+          "write"
+        ],
         "/usr/libexec/moci-verify-image /tmp/firmware.bin": [
           "exec"
         ],
@@ -267,6 +271,9 @@
         "/sbin/sysupgrade --create-backup /tmp/backup.tar.gz": [
           "exec"
         ],
+        "/sbin/sysupgrade --restore /tmp/restore.tar.gz": [
+          "exec"
+        ],
         "/sbin/sysupgrade --test /tmp/firmware.bin": [
           "exec"
         ],
@@ -280,6 +287,9 @@
           "exec"
         ],
         "/bin/rm -f /tmp/backup.tar.gz": [
+          "exec"
+        ],
+        "/bin/rm -f /tmp/restore.tar.gz": [
           "exec"
         ],
         "/bin/rm -f /tmp/firmware.bin": [
@@ -383,6 +393,7 @@
         "fstab",
         "rpcd",
         "moci_wifi_schedule",
+        "moci_quota",
         "smartdns",
         "watchcat",
         "vnstat",

@@ -10,7 +10,7 @@ const core = readFileSync('moci/js/core.js', 'utf8');
 const defaults = readFileSync('files/moci-addon-defaults', 'utf8');
 
 const expected = {
-  sqm: 'sqm', bandwidth: 'nlbwmon', multiwan: 'mwan3', adblock: 'adblock',
+  sqm: 'sqm', bandwidth: 'nlbwmon', multiwan: 'mwan3', securedns: 'smartdns', adblock: 'adblock',
   tailscale: 'tailscale', terminal: 'ttyd', statistics: 'luci_statistics', nas: 'samba4'
 };
 

@@ -12,6 +12,8 @@ const ADDONS=[
 		desc:'Load-balance and fail over across multiple WAN uplinks (mwan3).'},
 	{key:'adblock',name:'Ad Blocking',group:'Security & Privacy',service:'adblock',route:'/adblock',
 		desc:'Network-wide DNS blocking of ads, trackers and malware domains (adblock).'},
+	{key:'securedns',name:'Secure DNS (DoH/DoT)',group:'Security & Privacy',service:'smartdns',route:'/securedns',
+		desc:'Encrypted DNS upstreams (DNS-over-HTTPS / TLS) via SmartDNS, plus DNSSEC validation.'},
 	{key:'tailscale',name:'Tailscale VPN',group:'Security & Privacy',service:'tailscale',route:'/tailscale',
 		desc:'Zero-config mesh VPN to reach this network securely from anywhere.'},
 	{key:'terminal',name:'Web Terminal',group:'System & Diagnostics',service:'ttyd',route:'/terminal',

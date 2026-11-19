@@ -3,7 +3,7 @@
 # add-on service whose feature flag is off, so nothing runs until the user turns it
 # on from the Features page. Runs once via uci-defaults; a flag already set to '1'
 # (user enabled it before an upgrade) is respected and left running.
-for entry in sqm:sqm bandwidth:nlbwmon multiwan:mwan3 adblock:adblock tailscale:tailscale terminal:ttyd statistics:luci_statistics statistics:collectd nas:samba4; do
+for entry in sqm:sqm bandwidth:nlbwmon multiwan:mwan3 securedns:smartdns adblock:adblock tailscale:tailscale terminal:ttyd statistics:luci_statistics statistics:collectd nas:samba4; do
 	feature="${entry%%:*}"
 	service="${entry##*:}"
 	enabled="$(uci -q get "moci.features.$feature")"

@@ -123,6 +123,7 @@ CONFIG_PACKAGE_tailscale=y
 CONFIG_PACKAGE_ttyd=y
 CONFIG_PACKAGE_luci-app-ttyd=y
 CONFIG_PACKAGE_ethtool=y
+CONFIG_PACKAGE_etherwake=y
 CONFIG_PACKAGE_irqbalance=y
 CONFIG_PACKAGE_uhttpd-mod-ubus=y
 CONFIG_PACKAGE_dnsmasq-full=y

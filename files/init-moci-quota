@@ -1,0 +1,19 @@
+#!/bin/sh /etc/rc.common
+# Installs the per-device bandwidth quota cron job (every 5 minutes).
+START=98
+STOP=10
+USE_PROCD=0
+CRON='/usr/sbin/moci-quota'
+start() {
+  mkdir -p /etc/crontabs
+  touch /etc/crontabs/root
+  grep -Fq "$CRON" /etc/crontabs/root ||
+    printf '*/5 * * * * %s\n' "$CRON" >> /etc/crontabs/root
+  /etc/init.d/cron enable >/dev/null 2>&1 || :
+  /etc/init.d/cron restart >/dev/null 2>&1 || :
+}
+stop() {
+  [ -f /etc/crontabs/root ] || return 0
+  sed -i '\|/usr/sbin/moci-quota|d' /etc/crontabs/root
+  /etc/init.d/cron restart >/dev/null 2>&1 || :
+}

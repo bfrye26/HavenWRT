@@ -1,6 +1,6 @@
 // Bump on every frontend release so browsers fetch fresh modules instead of a
 // stale cached bundle. Kept in sync with the query strings in index.html.
-const ASSET_VER = '1.0.3r1';
+const ASSET_VER = '1.1.0r1';
 
 export class OpenWrtCore {
 	constructor() {
@@ -83,6 +83,7 @@ export class OpenWrtCore {
 			features: 'features',
 			bandwidth: 'bandwidth',
 			multiwan: 'multiwan',
+			securedns: 'securedns',
 			adblock: 'adblock',
 			tailscale: 'tailscale',
 			terminal: 'terminal',
@@ -237,6 +238,7 @@ export class OpenWrtCore {
 			sqm: '0',
 			bandwidth: '0',
 			multiwan: '0',
+			securedns: '0',
 			adblock: '0',
 			tailscale: '0',
 			terminal: '0',
@@ -272,6 +274,7 @@ export class OpenWrtCore {
 			features: './modules/features.js',
 			bandwidth: './modules/bandwidth.js',
 			multiwan: './modules/multiwan.js',
+			securedns: './modules/securedns.js',
 			adblock: './modules/adblock.js',
 			tailscale: './modules/tailscale.js',
 			terminal: './modules/terminal.js',
@@ -336,6 +339,7 @@ export class OpenWrtCore {
 			features: ['system'],
 			bandwidth: ['bandwidth'],
 			multiwan: ['multiwan'],
+			securedns: ['securedns'],
 			adblock: ['adblock'],
 			tailscale: ['tailscale'],
 			terminal: ['terminal'],

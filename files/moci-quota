@@ -1,0 +1,130 @@
+#!/usr/bin/env python3
+# Haven per-device daily bandwidth quotas. Runs from cron (every 5 min).
+# Reads nlbwmon accounting, compares each device's usage today against its cap
+# (moci_quota UCI), and toggles a dedicated `moci_quota_<mac>` firewall REJECT
+# rule. Independent of the manual pause rule (`moci_block_<mac`).
+#
+# Accounting note: usage = nlbwmon current total minus a baseline captured at the
+# start of each calendar day (kept in /tmp). It resets daily and on reboot, and
+# follows nlbwmon's own counter resets. Best-effort, not a hard billing meter.
+import json
+import os
+import re
+import subprocess
+import datetime
+
+
+def uci(*args):
+    return subprocess.run(['uci', *args], capture_output=True, text=True)
+
+
+def uci_get(key):
+    r = uci('-q', 'get', key)
+    return r.stdout.strip() if r.returncode == 0 else None
+
+
+def sections(config, want_type):
+    out = {}
+    for line in uci('show', config).stdout.splitlines():
+        m = re.match(r'%s\.(@\w+\[\d+\])=(\w+)' % re.escape(config), line)
+        if m and m.group(2) == want_type:
+            out[m.group(1)] = m.group(2)
+    return out
+
+
+def reload_firewall():
+    uci('commit', 'firewall')
+    subprocess.run(['/etc/init.d/firewall', 'reload'], capture_output=True)
+    subprocess.run(['logger', '-t', 'moci-quota', 'quota rules updated'], capture_output=True)
+
+
+def main():
+    enabled = uci_get('moci_quota.settings.enabled') == '1'
+
+    # Existing quota-managed firewall rules, keyed by MAC.
+    quota_rules = {}
+    for sec in sections('firewall', 'rule'):
+        name = uci_get('firewall.%s.name' % sec) or ''
+        if name.startswith('moci_quota_'):
+            quota_rules[name[len('moci_quota_'):]] = sec
+
+    if not enabled:
+        changed = False
+        for sec in quota_rules.values():
+            uci('delete', 'firewall.%s' % sec)
+            changed = True
+        if changed:
+            reload_firewall()
+        return
+
+    # Active per-device caps (MB -> bytes).
+    caps = {}
+    for sec in sections('moci_quota', 'device'):
+        mac = (uci_get('moci_quota.%s.mac' % sec) or '').lower()
+        limit_mb = uci_get('moci_quota.%s.limit_mb' % sec)
+        if mac and limit_mb and uci_get('moci_quota.%s.enabled' % sec) == '1':
+            try:
+                caps[mac] = int(float(limit_mb) * 1024 * 1024)
+            except ValueError:
+                pass
+
+    # nlbwmon current per-device totals.
+    try:
+        dl = subprocess.run(['/usr/libexec/nlbwmon-action', 'download', '-f', 'json'],
+                            capture_output=True, text=True, timeout=30)
+        obj = json.loads(dl.stdout)
+    except Exception:
+        return  # nlbwmon not running/ready yet — leave rules as they are.
+    idx = {c: i for i, c in enumerate(obj.get('columns', []))}
+    if 'mac' not in idx:
+        return
+    totals = {}
+    for row in obj.get('data', []):
+        mac = str(row[idx['mac']]).lower()
+        if not mac or mac == '00:00:00:00:00:00':
+            continue
+        rx = int(row[idx.get('rx_bytes', 0)] or 0)
+        tx = int(row[idx.get('tx_bytes', 0)] or 0)
+        totals[mac] = totals.get(mac, 0) + rx + tx
+
+    today = datetime.date.today().isoformat()
+    base_dir = '/tmp/moci-quota/' + today
+    os.makedirs(base_dir, exist_ok=True)
+    for d in os.listdir('/tmp/moci-quota'):
+        if d != today:
+            subprocess.run(['rm', '-rf', '/tmp/moci-quota/' + d], capture_output=True)
+
+    changed = False
+    for mac, limit in caps.items():
+        cur = totals.get(mac, 0)
+        bf = os.path.join(base_dir, mac.replace(':', ''))
+        try:
+            base = int(open(bf).read().strip())
+        except Exception:
+            base = cur
+            open(bf, 'w').write(str(base))
+        if cur < base:  # nlbwmon counter reset (commit/reboot) — rebase.
+            base = cur
+            open(bf, 'w').write(str(base))
+        over = (cur - base) >= limit
+        sec = quota_rules.get(mac)
+        if over:
+            if not sec:
+                sec = uci('add', 'firewall', 'rule').stdout.strip()
+                for k, v in {'name': 'moci_quota_' + mac, 'src': 'lan', 'src_mac': mac,
+                             'dest': 'wan', 'proto': 'all', 'target': 'REJECT'}.items():
+                    uci('set', 'firewall.%s.%s' % (sec, k), v)
+                changed = True
+            if uci_get('firewall.%s.enabled' % sec) != '1':
+                uci('set', 'firewall.%s.enabled' % sec, '1')
+                changed = True
+        elif sec and uci_get('firewall.%s.enabled' % sec) != '0':
+            uci('set', 'firewall.%s.enabled' % sec, '0')
+            changed = True
+
+    if changed:
+        reload_firewall()
+
+
+if __name__ == '__main__':
+    main()

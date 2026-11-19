@@ -14,7 +14,7 @@
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="black" />
 		<link rel="apple-touch-icon" href="icons/icon-192.png" />
-		<link rel="stylesheet" href="app.css?v=1.0.3r1" />
+		<link rel="stylesheet" href="app.css?v=1.1.0r1" />
 	</head>
 	<body>
 		<div id="app">
@@ -74,6 +74,7 @@
 								<a class="nav-item" href="#/profiles"><span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="nav-label">Profiles</span></a>
 							<a class="nav-item" href="#/networks"><span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M6 9v3a3 3 0 0 0 3 3h6"/><path d="M18 15v-3a3 3 0 0 0-3-3H9"/></svg></span><span class="nav-label">Guest &amp; IoT Networks</span></a>
 							<a class="nav-item" href="#/adblock" data-feature="adblock"><span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/><path d="M8 12h8"/></svg></span><span class="nav-label">Ad Blocking</span></a>
+							<a class="nav-item" href="#/securedns" data-feature="securedns"><span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="nav-label">Secure DNS</span></a>
 							<a class="nav-item" href="#/tailscale" data-feature="tailscale"><span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M6.5 7.5L11 16M17.5 7.5L13 16M7 6h10"/></svg></span><span class="nav-label">Tailscale VPN</span></a>
 							</div>
 							<div class="nav-group">
@@ -188,6 +189,11 @@
 						<div id="adblock-page" class="page hidden">
 							<h2>Ad Blocking</h2>
 							<div id="adblock-content"></div>
+						</div>
+
+						<div id="securedns-page" class="page hidden">
+							<h2>Secure DNS</h2>
+							<div id="securedns-content"></div>
 						</div>
 
 						<div id="tailscale-page" class="page hidden">
@@ -1132,6 +1138,15 @@
 											id="edit-fw-rule-src-ip"
 											class="form-input"
 											placeholder="0.0.0.0/0 for any"
+										/>
+									</div>
+									<div class="form-group">
+										<label class="form-label">SOURCE MAC (optional)</label>
+										<input
+											type="text"
+											id="edit-fw-rule-src-mac"
+											class="form-input"
+											placeholder="aa:bb:cc:dd:ee:ff"
 										/>
 									</div>
 								</div>
@@ -2214,6 +2229,26 @@
 									<button class="action-btn" id="save-general-btn">SAVE CHANGES</button>
 								</div>
 							</div>
+
+							<div class="stat-card" style="margin-top: 24px">
+								<div class="section-title">TIME SYNC &amp; SCHEDULED REBOOT</div>
+								<div class="form-group">
+									<label class="form-label" for="ntp-servers">NTP SERVERS (space-separated)</label>
+									<input type="text" id="ntp-servers" class="form-input" placeholder="0.openwrt.pool.ntp.org 1.openwrt.pool.ntp.org" />
+								</div>
+								<div class="form-group">
+									<label class="form-label" for="ntp-enabled">NTP CLIENT</label>
+									<select id="ntp-enabled" class="form-input"><option value="1">Enabled</option><option value="0">Disabled</option></select>
+								</div>
+								<div class="form-group">
+									<label class="form-label" for="reboot-time">SCHEDULED REBOOT TIME (empty = off)</label>
+									<input type="time" id="reboot-time" class="form-input" />
+								</div>
+								<div class="quick-actions">
+									<button class="action-btn" id="save-time-btn">SAVE TIME SETTINGS</button>
+								</div>
+								<p class="page-note">Scheduled reboot runs daily at the chosen time via cron. Leave the time empty to disable it.</p>
+							</div>
 						</div>
 
 						<div class="tab-content hidden" id="tab-logs">
@@ -2285,6 +2320,18 @@
 								<div class="quick-actions">
 									<button class="action-btn" id="backup-btn">GENERATE BACKUP</button>
 									<button class="action-btn danger" id="reset-btn">RESET TO DEFAULTS</button>
+								</div>
+							</div>
+
+							<div class="stat-card" style="margin-top: 24px">
+								<div class="section-title">RESTORE FROM BACKUP</div>
+								<p class="page-note">Upload a backup archive (.tar.gz) generated above to restore its configuration. This overwrites the current settings and reboots the router.</p>
+								<div class="form-group">
+									<label class="form-label" for="restore-file">BACKUP FILE</label>
+									<input type="file" id="restore-file" class="form-input" accept=".gz,application/gzip" />
+								</div>
+								<div class="action-row" style="margin-top: 12px">
+									<button class="action-btn" id="restore-btn">RESTORE CONFIGURATION</button>
 								</div>
 							</div>
 						</div>
@@ -2628,7 +2675,7 @@
 		</div>
 
 		<script type="module">
-			import { OpenWrtCore } from './js/core.js?v=1.0.3r1';
+			import { OpenWrtCore } from './js/core.js?v=1.1.0r1';
 			window.app = new OpenWrtCore();
 			window.app.init();
 		</script>

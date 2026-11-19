@@ -41,8 +41,10 @@ export default class SystemModule {
 	setupHandlers() {
 		const buttons = {
 			'save-general-btn': () => this.saveGeneral(),
+			'save-time-btn': () => this.saveTime(),
 			'change-password-btn': () => this.changePassword(),
 			'backup-btn': () => this.createBackup(),
+			'restore-btn': () => this.restoreBackup(),
 			'reset-btn': () => this.factoryReset(),
 			'add-cron-btn': () => {
 				this.core.resetModal('cron-modal');
@@ -126,6 +128,55 @@ export default class SystemModule {
 		} catch (error) {
 			console.warn('Could not read system settings:', error);
 			await this.loadTimezones('UTC', 'UTC0');
+		}
+		await this.loadTime();
+	}
+
+	async loadTime() {
+		try {
+			const [s, r] = await this.core.uciGet('system', '@timeserver[0]');
+			const v = (s === 0 && r?.values) || {};
+			const servers = Array.isArray(v.server) ? v.server.join(' ') : (v.server || '');
+			const ntpServers = document.getElementById('ntp-servers');
+			if (ntpServers) ntpServers.value = servers;
+			const ntpEnabled = document.getElementById('ntp-enabled');
+			if (ntpEnabled) ntpEnabled.value = v.enabled === '0' ? '0' : '1';
+		} catch {}
+		try {
+			const [s, r] = await this.core.ubusCall('file', 'read', { path: '/etc/crontabs/root' });
+			const txt = (s === 0 && r?.data) || '';
+			const line = txt.split('\n').find(l => l.includes('moci-scheduled-reboot'));
+			const rt = document.getElementById('reboot-time');
+			if (rt) {
+				const m = line ? /^(\d{1,2})\s+(\d{1,2})\s/.exec(line.trim()) : null;
+				rt.value = m ? `${String(m[2]).padStart(2, '0')}:${String(m[1]).padStart(2, '0')}` : '';
+			}
+		} catch {}
+	}
+
+	async saveTime() {
+		const btn = document.getElementById('save-time-btn');
+		if (btn) btn.disabled = true;
+		try {
+			const servers = (document.getElementById('ntp-servers')?.value || '').trim().split(/\s+/).filter(Boolean);
+			const enabled = document.getElementById('ntp-enabled')?.value || '1';
+			await this.core.uciSet('system', '@timeserver[0]', { server: servers, enabled });
+			await this.core.uciCommit('system');
+			try { await this.core.serviceReload('system'); } catch {}
+			const time = document.getElementById('reboot-time')?.value || '';
+			const [rs, rr] = await this.core.ubusCall('file', 'read', { path: '/etc/crontabs/root' });
+			const lines = ((rs === 0 && rr?.data) || '').split('\n').filter(l => l.trim() && !l.includes('moci-scheduled-reboot'));
+			if (time) {
+				const [hh, mm] = time.split(':');
+				lines.push(`${Number(mm)} ${Number(hh)} * * * /sbin/reboot # moci-scheduled-reboot`);
+			}
+			await this.core.ubusCall('file', 'write', { path: '/etc/crontabs/root', data: lines.join('\n') + '\n' });
+			try { await this.core.serviceReload('cron'); } catch {}
+			this.core.showToast('Time settings saved', 'success');
+		} catch (error) {
+			this.core.showToast('Failed to save time settings: ' + error.message, 'error');
+		} finally {
+			if (btn) btn.disabled = false;
 		}
 	}
 
@@ -281,6 +332,40 @@ export default class SystemModule {
 			try {
 				await this.core.ubusCall('file', 'exec', { command: '/bin/rm', params: ['-f', '/tmp/backup.tar.gz'] });
 			} catch {}
+		}
+	}
+
+	async restoreBackup() {
+		const input = document.getElementById('restore-file');
+		const file = input?.files?.[0];
+		if (!file) {
+			this.core.showToast('Choose a backup .tar.gz file first', 'error');
+			return;
+		}
+		if (!confirm(`Restore configuration from "${file.name}"?\n\nThis overwrites the current settings and reboots the router. Generate a fresh backup first if you may want to undo this.`)) return;
+		const btn = document.getElementById('restore-btn');
+		if (btn) btn.disabled = true;
+		try {
+			this.core.showToast('Uploading backup…', 'info');
+			await this.uploadFileChunked(file, '/tmp/restore.tar.gz');
+			const [status, result] = await this.core.ubusCall(
+				'file', 'exec',
+				{ command: '/sbin/sysupgrade', params: ['--restore', '/tmp/restore.tar.gz'] },
+				{ timeout: 60000, retries: 0 }
+			);
+			if (status !== 0 || result?.code !== 0) {
+				this.core.showToast('Restore command failed — check the file is a valid Haven backup', 'error');
+				return;
+			}
+			this.core.showToast('Configuration restored. The router is rebooting…', 'success');
+			setTimeout(() => this.core.logout(), 3000);
+		} catch {
+			// sysupgrade --restore reboots the router; a dropped connection is expected.
+			this.core.showToast('Restore started. Wait for the router to reboot, then sign in again.', 'info');
+			setTimeout(() => this.core.logout(), 3000);
+		} finally {
+			if (btn) btn.disabled = false;
+			try { await this.core.ubusCall('file', 'exec', { command: '/bin/rm', params: ['-f', '/tmp/restore.tar.gz'] }); } catch {}
 		}
 	}
 

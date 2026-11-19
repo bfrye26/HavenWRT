@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=moci
-PKG_VERSION:=1.0.3
+PKG_VERSION:=1.1.0
 PKG_RELEASE:=1
 
 PKG_MAINTAINER:=HudsonGraeme
@@ -61,9 +61,11 @@ define Package/moci/install
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_BIN) ./files/moci-wifi-scheduler $(1)/usr/sbin/moci-wifi-scheduler
 	$(INSTALL_BIN) ./files/moci-dns-publish $(1)/usr/sbin/moci-dns-publish
+	$(INSTALL_BIN) ./files/moci-quota $(1)/usr/sbin/moci-quota
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/init-moci-wifi-scheduler $(1)/etc/init.d/moci-wifi-scheduler
 	$(INSTALL_BIN) ./files/init-moci-dns-publish $(1)/etc/init.d/moci-dns-publish
+	$(INSTALL_BIN) ./files/init-moci-quota $(1)/etc/init.d/moci-quota
 	$(INSTALL_BIN) ./files/init-moci-performance $(1)/etc/init.d/moci-performance
 	$(INSTALL_DIR) $(1)/etc/moci-dns-publish
 
@@ -85,6 +87,7 @@ define Package/moci/install
 	$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_CONF) ./files/moci.config $(1)/etc/config/moci
 	$(INSTALL_CONF) ./files/moci-wifi-schedule.config $(1)/etc/config/moci_wifi_schedule
+	$(INSTALL_CONF) ./files/moci-quota.config $(1)/etc/config/moci_quota
 
 	$(INSTALL_DIR) $(1)/etc/opkg/keys
 	$(INSTALL_DATA) ./files/moci-feed.pub $(1)/etc/opkg/keys/bc0c5f67deb5edb8
@@ -99,6 +102,7 @@ endef
 define Package/moci/conffiles
 /etc/config/moci
 /etc/config/moci_wifi_schedule
+/etc/config/moci_quota
 /etc/opkg/moci-apps.conf
 endef
 
@@ -111,6 +115,8 @@ define Package/moci/postinst
 	/etc/init.d/moci-wifi-scheduler start 2>/dev/null || :
 	/etc/init.d/moci-dns-publish enable 2>/dev/null || :
 	/etc/init.d/moci-dns-publish start 2>/dev/null || :
+	/etc/init.d/moci-quota enable 2>/dev/null || :
+	/etc/init.d/moci-quota start 2>/dev/null || :
 	if [ -f /etc/init.d/lighttpd ]; then
 		/etc/init.d/lighttpd restart
 		echo "MoCI installed (lighttpd). Access at http://[router-ip]/moci/"

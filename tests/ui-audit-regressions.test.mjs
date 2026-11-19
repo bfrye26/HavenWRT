@@ -70,26 +70,15 @@ function allText(node) { return (node.textContent || '') + (node.children || [])
 	assert(texts.some(t => /^\d/.test(t)), 'Y-axis tick labels still render');
 }
 
-// ---- BUG-05: QoS missing config = valid empty; transport failure = error ----
+// ---- BUG-05: legacy QoS classify tab redirects to the shipped SQM page ----
+// qos-scripts is not in the image; the dead classify UI was replaced with a
+// redirect so users never edit a config whose package is absent.
 {
-	const rendered = [];
-	const core = {
-		isFeatureEnabled: () => true,
-		uciGet: async () => [4, {}],
-		renderTable: (sel, items, cs, msg) => rendered.push({ sel, items, msg }),
-		filterUciSections: () => [],
-		loadResource: async (id, cs, feat, fetcher) => { await fetcher(); }
-	};
+	const navigated = [];
+	const core = { navigate: path => navigated.push(path) };
 	const net = Object.create(NetworkModule.prototype); net.core = core;
 	await net.loadQoS();
-	assert.equal(rendered.length, 1, 'empty qos config renders a table');
-	assert.equal(rendered[0].items.length, 0, 'valid empty rules');
-	assert.match(rendered[0].msg, /No classification rules configured/, 'empty state message, not an error');
-
-	core.uciGet = async () => { throw new Error('transport down'); };
-	let threw = false;
-	try { await net.loadQoS(); } catch { threw = true; }
-	assert.ok(threw, 'transport failure propagates to the error/Retry path');
+	assert.deepEqual(navigated, ['/qos'], 'legacy QoS tab redirects to the SQM page');
 }
 
 // ---- BUG-06: Diagnostics renders into the real connections-table and finishes ----
