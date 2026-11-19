@@ -15,12 +15,30 @@ export default class IpsecModule{
 		try{
 			const cfg=await this.core.uciGet('ipsec').catch(()=>[1,{values:{}}]);
 			this.cfg=(cfg[0]===0&&cfg[1]?.values)?cfg[1].values:{};
+			this.installed=await this.exec('/usr/sbin/ipsec',['version']).then(()=>true).catch(()=>false);
 			this.render();
 		}catch(e){this.root.replaceChildren(this.el('p','Unable to read IPsec: '+e.message,'page-error'));}
+	}
+	async installStrongswan(btn){
+		if(!confirm('Install strongSwan (IPsec daemon) now? This downloads packages from the OpenWrt repository.'))return;
+		btn.disabled=true;btn.textContent='INSTALLING…';
+		try{
+			await this.exec('/usr/libexec/moci-pkg-call',['install-general','strongswan-default','strongswan-mod-openssl','swanctl']);
+			this.core.showToast('strongSwan installed','success');await this.show();
+		}catch(e){this.core.showToast('Install failed: '+e.message,'error');btn.disabled=false;btn.textContent='INSTALL STRONGSWAN';}
 	}
 	connections(){return Object.entries(this.cfg).filter(([,v])=>v?.['.type']==='connection');}
 	render(){
 		const root=this.root;root.replaceChildren();
+		if(!this.installed){
+			const card=this.el('div',undefined,'stat-card');
+			card.append(this.el('div','IPsec requires strongSwan','section-title'),
+				this.el('p','The strongSwan daemon is not installed. It is offered on demand (rather than baked into the image) because its kernel plugins need crypto options the default x86 kernel config hides. Install it below, or from System → Packages.','page-note'));
+			const btn=this.el('button','INSTALL STRONGSWAN','action-btn');btn.type='button';
+			btn.addEventListener('click',()=>this.installStrongswan(btn));
+			card.append(btn);root.append(card);
+			return;
+		}
 		root.append(this.el('p','IKEv2 site-to-site tunnels to another router or firewall (strongSwan). This hardware encrypts in software — expect reduced throughput versus WireGuard. Pre-shared-key auth is supported here; certificate auth can be configured in Advanced Config.','dmz-warning'));
 		const bar=this.el('div',undefined,'page-toolbar');
 		const add=this.el('button','ADD TUNNEL','action-btn');add.type='button';add.addEventListener('click',()=>this.addTunnel());bar.append(add);
