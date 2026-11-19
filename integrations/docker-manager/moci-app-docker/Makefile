@@ -1,6 +1,6 @@
 include $(TOPDIR)/rules.mk
 PKG_NAME:=moci-app-docker
-PKG_VERSION:=1.3.0
+PKG_VERSION:=2.0.0
 PKG_RELEASE:=1
 PKG_LICENSE:=MIT
 PKG_MAINTAINER:=MoCI contributors

@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=moci
-PKG_VERSION:=1.3.0
+PKG_VERSION:=2.0.0
 PKG_RELEASE:=1
 
 PKG_MAINTAINER:=HudsonGraeme
@@ -32,6 +32,7 @@ define Package/moci/install
 	$(INSTALL_DATA) ./dist/moci/index.html $(1)/www/moci/
 	$(INSTALL_DATA) ./dist/moci/app.css $(1)/www/moci/
 	$(INSTALL_DATA) ./dist/moci/manifest.json $(1)/www/moci/
+	$(INSTALL_DATA) ./dist/moci/sw.js $(1)/www/moci/
 
 	$(INSTALL_DIR) $(1)/www/moci/icons
 	$(INSTALL_DATA) ./dist/moci/icons/icon-192.png $(1)/www/moci/icons/
@@ -57,6 +58,7 @@ define Package/moci/install
 	$(INSTALL_BIN) ./files/moci-hardware-check $(1)/usr/libexec/moci-hardware-check
 	$(INSTALL_BIN) ./files/moci-verify-image $(1)/usr/libexec/moci-verify-image
 	$(INSTALL_BIN) ./files/moci-openvpn $(1)/usr/libexec/moci-openvpn
+	$(INSTALL_BIN) ./files/moci-rollback $(1)/usr/libexec/moci-rollback
 	$(INSTALL_DIR) $(1)/etc/moci
 	$(INSTALL_DATA) ./files/moci-image.pub $(1)/etc/moci/moci-image.pub
 	$(INSTALL_DIR) $(1)/usr/sbin

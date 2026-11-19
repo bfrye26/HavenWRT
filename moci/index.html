@@ -14,7 +14,7 @@
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="black" />
 		<link rel="apple-touch-icon" href="icons/icon-192.png" />
-		<link rel="stylesheet" href="app.css?v=1.3.0r1" />
+		<link rel="stylesheet" href="app.css?v=2.0.0r1" />
 	</head>
 	<body>
 		<div id="app">
@@ -85,6 +85,8 @@
 							<a class="nav-item" href="#/snmp" data-feature="snmp"><span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l6-6-6-6"/><path d="M12 19h8"/></svg></span><span class="nav-label">SNMP</span></a>
 							<a class="nav-item" href="#/netflow" data-feature="netflow"><span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></span><span class="nav-label">NetFlow</span></a>
 							<a class="nav-item" href="#/speedtest"><span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14l4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg></span><span class="nav-label">Speed Test</span></a>
+							<a class="nav-item" href="#/mesh" data-feature="wireless"><span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M6.5 7.5L11 16M17.5 7.5L13 16M7 6h10"/></svg></span><span class="nav-label">Mesh</span></a>
+							<a class="nav-item" href="#/ids" data-feature="ids"><span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/><path d="M12 8v4"/><circle cx="12" cy="15" r="0.5"/></svg></span><span class="nav-label">IDS / IPS</span></a>
 							<a class="nav-item" href="#/tailscale" data-feature="tailscale"><span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M6.5 7.5L11 16M17.5 7.5L13 16M7 6h10"/></svg></span><span class="nav-label">Tailscale VPN</span></a>
 							</div>
 							<div class="nav-group">
@@ -254,6 +256,16 @@
 						<div id="speedtest-page" class="page hidden">
 							<h2>Speed Test</h2>
 							<div id="speedtest-content"></div>
+						</div>
+
+						<div id="mesh-page" class="page hidden">
+							<h2>Mesh</h2>
+							<div id="mesh-content"></div>
+						</div>
+
+						<div id="ids-page" class="page hidden">
+							<h2>IDS / IPS</h2>
+							<div id="ids-content"></div>
 						</div>
 
 						<div id="tailscale-page" class="page hidden">
@@ -2610,6 +2622,11 @@
 									<div id="upgrade-status" class="fw-status"></div>
 								</div>
 							</div>
+
+							<div class="stat-card" style="margin-top: 24px">
+								<div class="section-title">ROLLBACK</div>
+								<div id="rollback-content"></div>
+							</div>
 						</div>
 					</div>
 
@@ -2755,7 +2772,7 @@
 		</div>
 
 		<script type="module">
-			import { OpenWrtCore } from './js/core.js?v=1.3.0r1';
+			import { OpenWrtCore } from './js/core.js?v=2.0.0r1';
 			window.app = new OpenWrtCore();
 			window.app.init();
 		</script>

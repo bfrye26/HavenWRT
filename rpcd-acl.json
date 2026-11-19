@@ -207,6 +207,7 @@
         "opennds",
         "ipsec",
         "softflowd",
+        "snort3",
         "smartdns",
         "watchcat",
         "vnstat",
@@ -337,6 +338,15 @@
         "/usr/bin/iperf3 *": [
           "exec"
         ],
+        "/usr/sbin/iw *": [
+          "exec"
+        ],
+        "/usr/bin/snort3 *": [
+          "exec"
+        ],
+        "/usr/libexec/moci-rollback *": [
+          "exec"
+        ],
         "/sbin/sysupgrade --test /tmp/firmware.bin": [
           "exec"
         ],
@@ -460,6 +470,7 @@
         "opennds",
         "ipsec",
         "softflowd",
+        "snort3",
         "smartdns",
         "watchcat",
         "vnstat",

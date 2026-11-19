@@ -1418,6 +1418,59 @@ export default class SystemModule {
 				result.textContent = 'Could not check for updates: ' + e.message + '. Use “Latest releases” to browse manually.';
 			} finally { check.disabled = false; }
 		});
+		await this.loadRollback();
+	}
+
+	async loadRollback() {
+		const root = document.getElementById('rollback-content');
+		if (!root) return;
+		root.replaceChildren();
+		const el = (tag, text, cls) => { const e = document.createElement(tag); if (text !== undefined) e.textContent = text; if (cls) e.className = cls; return e; };
+		root.append(el('p', 'x86 upgrades reformat the root partition, so a rollback image must live on external storage (USB) — a copy kept on the router itself would be erased by the upgrade. Back up the current root to USB before upgrading, or revert to a previously saved full image.', 'page-note'));
+		let mounts = [];
+		try {
+			const [s, r] = await this.core.ubusCall('file', 'exec', { command: '/usr/libexec/moci-rollback', params: ['storage'] }, { timeout: 15000 });
+			if (s === 0 && r?.stdout) mounts = String(r.stdout).split('\n').filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+		} catch {}
+		if (!mounts.length) {
+			root.append(el('p', 'No USB/external storage mounted. Mount a USB drive (System → Mounts) to enable backup and rollback.', 'dmz-warning'));
+		} else {
+			const sel = el('select'); sel.className = 'form-input';
+			for (const m of mounts) { const o = el('option', m.mount + ' (' + m.free_mb + ' MB free)'); o.value = m.mount; sel.append(o); }
+			const backup = el('button', 'BACK UP CURRENT ROOT TO USB', 'action-btn'); backup.type = 'button'; backup.style.marginTop = '10px';
+			backup.addEventListener('click', async () => {
+				if (!confirm('Write a raw backup of the running root partition to ' + sel.value + '? This may take a few minutes.')) return;
+				backup.disabled = true; backup.textContent = 'BACKING UP…';
+				try {
+					const [s, r] = await this.core.ubusCall('file', 'exec', { command: '/usr/libexec/moci-rollback', params: ['backup', sel.value] }, { timeout: 300000 });
+					let j = {}; try { j = JSON.parse(r?.stdout || '{}'); } catch {}
+					if (s === 0 && j.ok) this.core.showToast('Root backed up to ' + j.path, 'success');
+					else this.core.showToast('Backup failed: ' + (j.error || 'unknown'), 'error');
+				} catch (e) { this.core.showToast('Backup failed: ' + e.message, 'error'); }
+				finally { backup.disabled = false; backup.textContent = 'BACK UP CURRENT ROOT TO USB'; }
+			});
+			root.append(sel, backup);
+		}
+		root.append(el('h3', 'Revert to a saved image'));
+		root.append(el('p', 'Select a previously saved FULL firmware image (.img.gz). It is validated and flashed like a normal upgrade; configuration is preserved.', 'page-note'));
+		const file = el('input'); file.type = 'file'; file.accept = '.img.gz,.img,.bin'; file.className = 'form-input';
+		const revert = el('button', 'REVERT', 'action-btn danger'); revert.type = 'button'; revert.style.marginTop = '10px';
+		revert.addEventListener('click', async () => {
+			const f = file.files?.[0];
+			if (!f) { this.core.showToast('Select a saved firmware image first', 'error'); return; }
+			if (!confirm('Revert to "' + f.name + '"? The router will reflash and reboot.')) return;
+			if (!confirm('This replaces the current firmware. Proceed?')) return;
+			revert.disabled = true;
+			try {
+				await this.uploadFileChunked(f, '/tmp/rollback.bin');
+				const [s, r] = await this.core.ubusCall('file', 'exec', { command: '/usr/libexec/moci-rollback', params: ['revert', '/tmp/rollback.bin'] }, { timeout: 120000, retries: 0 });
+				let j = {}; try { j = JSON.parse(r?.stdout || '{}'); } catch {}
+				if (s === 0 && j.ok) { this.core.showToast('Revert started; wait for reboot.', 'info'); setTimeout(() => this.core.logout(), 3000); }
+				else this.core.showToast('Revert failed: ' + (j.error || 'unknown'), 'error');
+			} catch { this.core.showToast('Connection lost during revert; wait for the router to return.', 'info'); }
+			finally { revert.disabled = false; }
+		});
+		root.append(file, revert);
 	}
 }
 

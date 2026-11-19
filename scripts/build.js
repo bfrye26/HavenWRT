@@ -44,6 +44,8 @@ async function buildJS() {
 		'moci/js/modules/ups.js',
 		'moci/js/modules/netflow.js',
 		'moci/js/modules/speedtest.js',
+		'moci/js/modules/mesh.js',
+		'moci/js/modules/ids.js',
 		'moci/js/modules/adblock.js',
 		'moci/js/modules/tailscale.js',
 		'moci/js/modules/terminal.js',
@@ -94,6 +96,7 @@ async function copyAssets() {
 	await writeFile(join(distDir, 'index.html'), html);
 
 	await copyFile('moci/manifest.json', join(distDir, 'manifest.json'));
+	await copyFile('moci/sw.js', join(distDir, 'sw.js'));
 
 	// OUI vendor registry is a large pre-generated data module; copy it as-is
 	// (skip terser) and let the Devices page lazy-load it.

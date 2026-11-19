@@ -1,6 +1,6 @@
 // Bump on every frontend release so browsers fetch fresh modules instead of a
 // stale cached bundle. Kept in sync with the query strings in index.html.
-const ASSET_VER = '1.3.0r1';
+const ASSET_VER = '2.0.0r1';
 
 export class OpenWrtCore {
 	constructor() {
@@ -94,6 +94,8 @@ export class OpenWrtCore {
 			ups: 'ups',
 			netflow: 'netflow',
 			speedtest: 'speedtest',
+			mesh: 'mesh',
+			ids: 'ids',
 			adblock: 'adblock',
 			tailscale: 'tailscale',
 			terminal: 'terminal',
@@ -198,6 +200,7 @@ export class OpenWrtCore {
 	}
 
 	async init() {
+		this.registerServiceWorker();
 		if (this.sessionId) {
 			const valid = await this.validateSession();
 			if (valid) {
@@ -207,6 +210,15 @@ export class OpenWrtCore {
 		}
 
 		this.showLoginView();
+	}
+
+	registerServiceWorker() {
+		// Installable PWA shell. Best-effort: requires a secure context (the router
+		// serves HTTPS; a self-signed cert must be trusted before install prompts
+		// appear). The SW never caches /ubus RPC or auth — see sw.js.
+		if ('serviceWorker' in navigator && window.isSecureContext) {
+			navigator.serviceWorker.register('sw.js').catch(() => {});
+		}
 	}
 
 	async loadFeatures() {
@@ -258,6 +270,7 @@ export class OpenWrtCore {
 			lldp: '0',
 			ups: '0',
 			netflow: '0',
+			ids: '0',
 			adblock: '0',
 			tailscale: '0',
 			terminal: '0',
@@ -304,6 +317,8 @@ export class OpenWrtCore {
 			ups: './modules/ups.js',
 			netflow: './modules/netflow.js',
 			speedtest: './modules/speedtest.js',
+			mesh: './modules/mesh.js',
+			ids: './modules/ids.js',
 			adblock: './modules/adblock.js',
 			tailscale: './modules/tailscale.js',
 			terminal: './modules/terminal.js',
@@ -379,6 +394,8 @@ export class OpenWrtCore {
 			ups: ['ups'],
 			netflow: ['netflow'],
 			speedtest: ['diagnostics'],
+			mesh: ['wireless'],
+			ids: ['ids'],
 			adblock: ['adblock'],
 			tailscale: ['tailscale'],
 			terminal: ['terminal'],

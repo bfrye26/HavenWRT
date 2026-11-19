@@ -1,0 +1,37 @@
+#!/bin/sh
+# Haven firmware rollback helper. OFF-ROOT storage only (USB/external).
+# x86 sysupgrade reformats the root partition, so a root-resident saved image
+# would be destroyed by the very upgrade it is meant to undo — always store on
+# external media. `backup` writes a raw copy of the running root partition (a
+# safety snapshot, restored manually with dd); `revert` flashes a previously
+# saved FULL combined image via the standard validated sysupgrade path.
+ACTION="$1"; ARG="$2"
+case "$ACTION" in
+  storage)
+    awk '$2 ~ /^\/mnt\// {print $2}' /proc/mounts | while read -r m; do
+      free=$(df -m "$m" 2>/dev/null | awk 'NR==2{print $4}')
+      printf '{"mount":"%s","free_mb":%s}\n' "$m" "${free:-0}"
+    done
+    ;;
+  backup)
+    [ -n "$ARG" ] || { echo '{"ok":false,"error":"mount required"}'; exit 1; }
+    [ -d "$ARG" ] || { echo '{"ok":false,"error":"mount not present"}'; exit 1; }
+    rootdev=$(readlink -f /dev/root 2>/dev/null)
+    [ -b "$rootdev" ] || { echo '{"ok":false,"error":"root device not found"}'; exit 1; }
+    out="$ARG/moci-root-$(date +%Y%m%d-%H%M%S).img"
+    if dd if="$rootdev" of="$out" bs=4M 2>/dev/null; then
+      printf '{"ok":true,"path":"%s"}\n' "$out"
+    else
+      rm -f "$out"; echo '{"ok":false,"error":"backup failed"}'; exit 1
+    fi
+    ;;
+  revert)
+    [ -f "$ARG" ] || { echo '{"ok":false,"error":"image not found"}'; exit 1; }
+    if ! /sbin/sysupgrade --test "$ARG" >/dev/null 2>&1; then
+      echo '{"ok":false,"error":"image test failed"}'; exit 1
+    fi
+    /sbin/sysupgrade "$ARG" >/dev/null 2>&1
+    echo '{"ok":true}'
+    ;;
+  *) echo '{"ok":false,"error":"unknown action"}'; exit 1 ;;
+esac

@@ -22,6 +22,8 @@ const ADDONS=[
 		desc:'Splash-page gateway for guest networks (openNDS, firewall4-native).'},
 	{key:'ipsec',name:'IPsec / IKEv2',group:'Security & Privacy',service:'ipsec',route:'/ipsec',
 		desc:'Site-to-site IKEv2 tunnels (strongSwan). Software crypto on this hardware.'},
+	{key:'ids',name:'IDS / IPS (snort3)',group:'Security & Privacy',service:'snort3',route:'/ids',
+		desc:'Intrusion detection/prevention. Passive IDS by default; inline IPS reduces throughput.'},
 	{key:'vnstat',name:'Traffic History (vnStat)',group:'Monitoring',service:'vnstat',route:'/vnstat',
 		desc:'Long-term per-interface traffic totals, daily and monthly.'},
 	{key:'lldp',name:'LLDP Neighbors',group:'Monitoring',service:'lldpd',route:'/lldp',
