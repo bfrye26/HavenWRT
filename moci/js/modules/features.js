@@ -22,6 +22,16 @@ const ADDONS=[
 		desc:'Splash-page gateway for guest networks (openNDS, firewall4-native).'},
 	{key:'ipsec',name:'IPsec / IKEv2',group:'Security & Privacy',service:'ipsec',route:'/ipsec',
 		desc:'Site-to-site IKEv2 tunnels (strongSwan). Software crypto on this hardware.'},
+	{key:'vnstat',name:'Traffic History (vnStat)',group:'Monitoring',service:'vnstat',route:'/vnstat',
+		desc:'Long-term per-interface traffic totals, daily and monthly.'},
+	{key:'lldp',name:'LLDP Neighbors',group:'Monitoring',service:'lldpd',route:'/lldp',
+		desc:'Discover directly-connected switches and devices per port.'},
+	{key:'ups',name:'UPS Status',group:'Monitoring',service:'nut',route:'/ups',
+		desc:'Uninterruptible power supply charge, runtime and load (NUT).'},
+	{key:'snmp',name:'SNMP Agent',group:'Monitoring',service:'snmpd',route:'/snmp',
+		desc:'Expose router metrics to an SNMP manager (v2c/v3).'},
+	{key:'netflow',name:'NetFlow Exporter',group:'Monitoring',service:'softflowd',route:'/netflow',
+		desc:'Export flow records (NetFlow v5/v9/IPFIX) to a collector.'},
 	{key:'tailscale',name:'Tailscale VPN',group:'Security & Privacy',service:'tailscale',route:'/tailscale',
 		desc:'Zero-config mesh VPN to reach this network securely from anywhere.'},
 	{key:'terminal',name:'Web Terminal',group:'System & Diagnostics',service:'ttyd',route:'/terminal',
@@ -31,7 +41,7 @@ const ADDONS=[
 	{key:'nas',name:'NAS / File Sharing',group:'System & Diagnostics',service:'samba4',route:'/nas',
 		desc:'Share USB drives with the network via Samba (block-mount).'}
 ];
-const GROUPS=['Network Performance','Security & Privacy','System & Diagnostics'];
+const GROUPS=['Network Performance','Security & Privacy','Monitoring','System & Diagnostics'];
 
 export default class FeaturesModule{
 	constructor(core){

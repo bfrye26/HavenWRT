@@ -152,6 +152,9 @@
         "dhcp": [
           "ipv6leases"
         ],
+        "luci.lldpd": [
+          "getStatus"
+        ],
         "uci": [
           "get",
           "changes",
@@ -203,6 +206,7 @@
         "moci_quota",
         "opennds",
         "ipsec",
+        "softflowd",
         "smartdns",
         "watchcat",
         "vnstat",
@@ -322,6 +326,15 @@
           "exec"
         ],
         "/usr/sbin/ipsec *": [
+          "exec"
+        ],
+        "/usr/bin/vnstat *": [
+          "exec"
+        ],
+        "/usr/bin/upsc *": [
+          "exec"
+        ],
+        "/usr/bin/iperf3 *": [
           "exec"
         ],
         "/sbin/sysupgrade --test /tmp/firmware.bin": [
@@ -446,6 +459,7 @@
         "moci_quota",
         "opennds",
         "ipsec",
+        "softflowd",
         "smartdns",
         "watchcat",
         "vnstat",

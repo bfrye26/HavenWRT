@@ -56,6 +56,9 @@ export default class WifiModule{
 			card.append(this.el('div',undefined,'wifi-radio-head'));
 			card.firstChild.append(this.el('strong',info.band),this.el('span',up?'Active':'Inactive','dev-badge '+(up?'static':'dynamic')));
 			card.append(this.el('span','Channel '+info.channel+'  ·  '+id,'dev-mono'));
+			const tune=this.el('button','Tune','dev-action');tune.type='button';
+			tune.addEventListener('click',()=>this.editRadio(id,radio));
+			card.append(tune);
 			radioRow.append(card);
 		}
 		root.append(radioRow);
@@ -96,6 +99,31 @@ export default class WifiModule{
 		actions.append(toggle,edit,del);
 		card.append(info,actions);
 		return card;
+	}
+	editRadio(id,radio){
+		const holder=this.el('div',undefined,'wifi-edit-holder');
+		holder.append(this.el('h3','Tune radio '+id));
+		const form=this.el('form',undefined,'wifi-form stat-card');
+		const channel=this.el('input');channel.className='form-input';channel.value=radio.channel||'auto';channel.placeholder='auto or a channel number';
+		const htmode=this.el('select');htmode.className='form-input';
+		for(const m of ['NOHT','HT20','HT40','HT40+','HT40-','VHT20','VHT40','VHT80','VHT160','HE20','HE40','HE80','HE160']){const o=this.el('option',m);o.value=m;htmode.append(o);}
+		htmode.value=radio.htmode||'HT20';
+		const country=this.el('input');country.className='form-input';country.value=radio.country||'';country.placeholder='US, GB, DE… (2-letter)';country.maxLength=2;
+		const txpower=this.el('input');txpower.className='form-input';txpower.type='number';txpower.value=radio.txpower||'';txpower.placeholder='dBm (empty = default)';
+		form.append(this.field('Channel',channel),this.field('Channel width (htmode)',htmode),this.field('Country code',country),this.field('TX power (dBm)',txpower));
+		form.append(this.el('p','Changing radio settings briefly restarts Wi-Fi. Width options beyond your hardware’s capability are ignored by the driver.','page-note'));
+		const save=this.el('button','SAVE RADIO','action-btn');save.type='submit';form.append(save);
+		form.addEventListener('submit',async e=>{
+			e.preventDefault();if(this.busy)return;
+			const values={channel:channel.value.trim()||'auto',htmode:htmode.value};
+			if(country.value.trim())values.country=country.value.trim().toUpperCase();
+			if(txpower.value)values.txpower=txpower.value;
+			await this.applyWireless(async()=>{await this.uci('set',{config:'wireless',section:id,values});},'Radio '+id+' updated');
+			holder.remove();
+		});
+		holder.append(form);
+		const old=this.root.querySelector('.wifi-edit-holder');if(old)old.remove();
+		this.root.append(holder);holder.scrollIntoView({behavior:'smooth',block:'start'});
 	}
 	networkOptions(selected){
 		const sel=this.el('select');sel.className='form-input';

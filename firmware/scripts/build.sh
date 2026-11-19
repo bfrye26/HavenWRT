@@ -127,6 +127,7 @@ CONFIG_PACKAGE_etherwake=y
 CONFIG_PACKAGE_openvpn-openssl=y
 CONFIG_PACKAGE_luci-app-openvpn=y
 CONFIG_PACKAGE_opennds=y
+CONFIG_PACKAGE_softflowd=y
 # IPsec (strongSwan) is install-on-demand via System > Packages: its kernel-netlink
 # plugin needs kernel crypto gates that the default x86 kernel config hides, so the
 # meta-package cannot be baked reliably. The native IPsec UI ships regardless.
@@ -136,7 +137,7 @@ CONFIG_PACKAGE_dnsmasq-full=y
 CONFIG_PACKAGE_dnsmasq=n
 CONFIG
 make defconfig
-for p in moci moci-app-docker docker-compose dockerd samba4-server uhttpd-mod-ubus luci-ssl wpad-mbedtls luci-app-statistics luci-app-nlbwmon luci-app-mwan3 luci-app-banip luci-app-acme miniupnpd-nftables kmod-igc intel-microcode kmod-hwmon-coretemp pciutils usbutils iw resize2fs sfdisk partx-utils kmod-mac80211 kmod-rt2800-usb iwinfo wireless-regdb adblock luci-app-adblock tailscale ttyd luci-app-ttyd openvpn-openssl opennds; do
+for p in moci moci-app-docker docker-compose dockerd samba4-server uhttpd-mod-ubus luci-ssl wpad-mbedtls luci-app-statistics luci-app-nlbwmon luci-app-mwan3 luci-app-banip luci-app-acme miniupnpd-nftables kmod-igc intel-microcode kmod-hwmon-coretemp pciutils usbutils iw resize2fs sfdisk partx-utils kmod-mac80211 kmod-rt2800-usb iwinfo wireless-regdb adblock luci-app-adblock tailscale ttyd luci-app-ttyd openvpn-openssl opennds softflowd; do
   grep -q "^CONFIG_PACKAGE_${p}=y$" .config || { echo "Missing package after defconfig: $p" >&2; exit 1; }
 done
 make download -j"${JOBS:-2}"

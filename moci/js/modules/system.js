@@ -42,6 +42,7 @@ export default class SystemModule {
 		const buttons = {
 			'save-general-btn': () => this.saveGeneral(),
 			'save-time-btn': () => this.saveTime(),
+			'save-syslog-btn': () => this.saveSyslog(),
 			'change-password-btn': () => this.changePassword(),
 			'backup-btn': () => this.createBackup(),
 			'restore-btn': () => this.restoreBackup(),
@@ -130,6 +131,40 @@ export default class SystemModule {
 			await this.loadTimezones('UTC', 'UTC0');
 		}
 		await this.loadTime();
+		await this.loadSyslog();
+	}
+
+	async loadSyslog() {
+		try {
+			const [s, r] = await this.core.uciGet('system', '@system[0]');
+			const v = (s === 0 && r?.values) || {};
+			const server = document.getElementById('syslog-server');
+			if (server) server.value = v.log_ip || '';
+			const port = document.getElementById('syslog-port');
+			if (port) port.value = v.log_port || '514';
+			const proto = document.getElementById('syslog-proto');
+			if (proto) proto.value = v.log_proto || 'udp';
+		} catch {}
+	}
+
+	async saveSyslog() {
+		const server = (document.getElementById('syslog-server')?.value || '').trim();
+		const port = document.getElementById('syslog-port')?.value || '514';
+		const proto = document.getElementById('syslog-proto')?.value || 'udp';
+		const btn = document.getElementById('save-syslog-btn');
+		if (btn) btn.disabled = true;
+		try {
+			await this.core.uciSet('system', '@system[0]', {
+				log_ip: server, log_remote: server ? '1' : '0', log_port: port, log_proto: proto
+			});
+			await this.core.uciCommit('system');
+			try { await this.core.serviceReload('log'); } catch {}
+			this.core.showToast(server ? 'Remote syslog enabled' : 'Remote syslog disabled', 'success');
+		} catch (error) {
+			this.core.showToast('Failed to save syslog settings: ' + error.message, 'error');
+		} finally {
+			if (btn) btn.disabled = false;
+		}
 	}
 
 	async loadTime() {

@@ -1,6 +1,6 @@
 // Bump on every frontend release so browsers fetch fresh modules instead of a
 // stale cached bundle. Kept in sync with the query strings in index.html.
-const ASSET_VER = '1.2.0r1';
+const ASSET_VER = '1.3.0r1';
 
 export class OpenWrtCore {
 	constructor() {
@@ -88,6 +88,12 @@ export class OpenWrtCore {
 			openvpn: 'openvpn',
 			portal: 'portal',
 			ipsec: 'ipsec',
+			vnstat: 'vnstat',
+			snmp: 'snmp',
+			lldp: 'lldp',
+			ups: 'ups',
+			netflow: 'netflow',
+			speedtest: 'speedtest',
 			adblock: 'adblock',
 			tailscale: 'tailscale',
 			terminal: 'terminal',
@@ -247,6 +253,11 @@ export class OpenWrtCore {
 			openvpn: '0',
 			portal: '0',
 			ipsec: '0',
+			vnstat: '0',
+			snmp: '0',
+			lldp: '0',
+			ups: '0',
+			netflow: '0',
 			adblock: '0',
 			tailscale: '0',
 			terminal: '0',
@@ -287,6 +298,12 @@ export class OpenWrtCore {
 			openvpn: './modules/openvpn.js',
 			portal: './modules/portal.js',
 			ipsec: './modules/ipsec.js',
+			vnstat: './modules/vnstat.js',
+			snmp: './modules/snmp.js',
+			lldp: './modules/lldp.js',
+			ups: './modules/ups.js',
+			netflow: './modules/netflow.js',
+			speedtest: './modules/speedtest.js',
 			adblock: './modules/adblock.js',
 			tailscale: './modules/tailscale.js',
 			terminal: './modules/terminal.js',
@@ -356,6 +373,12 @@ export class OpenWrtCore {
 			openvpn: ['openvpn'],
 			portal: ['portal'],
 			ipsec: ['ipsec'],
+			vnstat: ['vnstat'],
+			snmp: ['snmp'],
+			lldp: ['lldp'],
+			ups: ['ups'],
+			netflow: ['netflow'],
+			speedtest: ['diagnostics'],
 			adblock: ['adblock'],
 			tailscale: ['tailscale'],
 			terminal: ['terminal'],
