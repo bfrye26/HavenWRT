@@ -127,6 +127,12 @@ CONFIG_PACKAGE_etherwake=y
 CONFIG_PACKAGE_openvpn-openssl=y
 CONFIG_PACKAGE_luci-app-openvpn=y
 CONFIG_PACKAGE_opennds=y
+# strongswan plugins need these kernel crypto/XFRM gates enabled, otherwise
+# defconfig hides the mods and drops the strongswan-full meta-package.
+CONFIG_KERNEL_CRYPTO_USER=y
+CONFIG_KERNEL_CRYPTO_SHA256=y
+CONFIG_KERNEL_CRYPTO_ECB=y
+CONFIG_KERNEL_XFRM_USER=y
 CONFIG_PACKAGE_strongswan=y
 CONFIG_PACKAGE_strongswan-full=y
 CONFIG_PACKAGE_swanctl=y
