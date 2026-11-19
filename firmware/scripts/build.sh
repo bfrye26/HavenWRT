@@ -127,6 +127,7 @@ CONFIG_PACKAGE_etherwake=y
 CONFIG_PACKAGE_openvpn-openssl=y
 CONFIG_PACKAGE_luci-app-openvpn=y
 CONFIG_PACKAGE_opennds=y
+CONFIG_PACKAGE_strongswan=y
 CONFIG_PACKAGE_strongswan-full=y
 CONFIG_PACKAGE_swanctl=y
 CONFIG_PACKAGE_luci-app-strongswan=y
