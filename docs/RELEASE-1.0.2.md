@@ -7,11 +7,11 @@ performance-only update on top of 1.0.1 — no UI, permission, or behaviour chan
 Built on OpenWrt **v25.12.6**.
 
 **Firmware image SHA-256:**
-`IMAGE_HASH_PLACEHOLDER`
+`a28d726ff4b15874db56f65b38dcfa6e7ba4292524c320d2af4cf80f3b4c8e6b`
 (`openwrt-x86-64-generic-ext4-combined-efi.img.gz`)
 
 **Installer ISO SHA-256 (dual-boot BIOS + UEFI):**
-`ISO_HASH_PLACEHOLDER`
+`f4287cb6ed7db3e79ab7659c5899d54cad20bb06e8989f49338933372f247613`
 (`MoCI-x86-64-Installer.iso`)
 
 ## What's new — speed & stability defaults
