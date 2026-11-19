@@ -1,0 +1,14 @@
+#!/bin/sh
+# HavenWRT performance defaults (first boot). Persisted in /etc/config thereafter.
+# - Software flow offload: fast-path established routed flows (biggest throughput win
+#   on x86; hardware offload is not available on I225-V).
+# - Packet steering mode 2: spread RX softirq across all cores (the NICs have 4
+#   balanced hardware queues; single-core steering caps aggregate throughput).
+# - irqbalance: keep NIC IRQs distributed across cores.
+uci set firewall.@defaults[0].flow_offloading='1'
+uci set network.@globals[0].packet_steering='2'
+uci set irqbalance.irqbalance.enabled='1'
+uci commit firewall
+uci commit network
+uci commit irqbalance
+exit 0

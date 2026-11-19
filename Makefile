@@ -64,11 +64,14 @@ define Package/moci/install
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/init-moci-wifi-scheduler $(1)/etc/init.d/moci-wifi-scheduler
 	$(INSTALL_BIN) ./files/init-moci-dns-publish $(1)/etc/init.d/moci-dns-publish
+	$(INSTALL_BIN) ./files/init-moci-performance $(1)/etc/init.d/moci-performance
 	$(INSTALL_DIR) $(1)/etc/moci-dns-publish
 
 	# Add-ons ship off: stop/disable their services on first boot unless enabled.
 	$(INSTALL_DIR) $(1)/etc/uci-defaults
 	$(INSTALL_BIN) ./files/moci-addon-defaults $(1)/etc/uci-defaults/99-moci-addon-defaults
+	# Speed defaults: flow offload, all-core packet steering, irqbalance.
+	$(INSTALL_BIN) ./files/moci-performance-defaults $(1)/etc/uci-defaults/98-moci-performance
 
 	$(INSTALL_DIR) $(1)/usr/libexec/rpcd
 	$(INSTALL_BIN) ./files/rpcd-moci $(1)/usr/libexec/rpcd/moci

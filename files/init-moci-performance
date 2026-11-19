@@ -1,0 +1,22 @@
+#!/bin/sh /etc/rc.common
+# HavenWRT performance tuning applied at every boot.
+# - CPU governor "performance": lock cores at max frequency so routing/softirq
+#   throughput does not dip while the scheduler ramps frequency.
+# - Larger NIC ring buffers: absorb bursts and cut RX drops on the I225-V ports.
+# Flow offload / packet steering / irqbalance are UCI settings handled by
+# /etc/uci-defaults/98-moci-performance (persisted in /etc/config).
+START=99
+
+start() {
+	local g i
+	for g in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
+		[ -w "$g" ] && echo performance > "$g" 2>/dev/null
+	done
+	for i in eth0 eth1 eth2 eth3 eth4 eth5; do
+		[ -d "/sys/class/net/$i" ] && ethtool -G "$i" rx 2048 tx 2048 2>/dev/null
+	done
+}
+
+reload() {
+	start
+}
