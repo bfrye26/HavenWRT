@@ -7,6 +7,14 @@ const FORWARD_FIELDS = {
 	'edit-forward-enabled': 'enabled'
 };
 
+// DMZ host = an all-ports DNAT redirect. No port fields are mapped, so the
+// saved redirect never carries src_dport/dest_port and forwards every port.
+const DMZ_FIELDS = {
+	'edit-dmz-name': 'name',
+	'edit-dmz-dest-ip': 'dest_ip',
+	'edit-dmz-enabled': 'enabled'
+};
+
 const FW_RULE_FIELDS = {
 	'edit-fw-rule-name': 'name',
 	'edit-fw-rule-target': 'target',
@@ -98,7 +106,7 @@ export default class NetworkModule {
 
 	async loadUpnp(){
 		if(!this.upnp){
-			const {default: UpnpModule}=await import('./upnp.js?v=1.0.0r5');
+			const {default: UpnpModule}=await import('./upnp.js?v=1.0.3r1');
 			this.upnp=new UpnpModule(this.core);
 		}
 		await this.upnp.load(document.getElementById('tab-upnp'));
@@ -111,6 +119,7 @@ export default class NetworkModule {
 			{ prefix: 'bridge-vlan', save: () => this.saveBridgeVlan() },
 			{ prefix: 'wireless', save: () => this.saveWireless() },
 			{ prefix: 'forward', save: () => this.saveForward() },
+			{ prefix: 'dmz', save: () => this.saveDmz() },
 			{ prefix: 'fw-rule', save: () => this.saveFirewallRule() },
 			{ prefix: 'zone', save: () => this.saveZone() },
 			{ prefix: 'nat', save: () => this.saveNat() },
@@ -179,6 +188,12 @@ export default class NetworkModule {
 			this.core.resetModal('nat-modal');
 			this.populateNatZoneSelect('');
 			this.core.openModal('nat-modal');
+		});
+
+		document.getElementById('dmz-set-btn')?.addEventListener('click', () => this.openDmzModal());
+		document.getElementById('dmz-remove-btn')?.addEventListener('click', () => this.deleteDmz());
+		document.getElementById('dmz-device-select')?.addEventListener('change', e => {
+			if (e.target.value) document.getElementById('edit-dmz-dest-ip').value = e.target.value;
 		});
 
 		document.getElementById('add-bridge-vlan-btn')?.addEventListener('click', () => {
@@ -846,7 +861,11 @@ export default class NetworkModule {
 			this.renderZones();
 			this.renderNatRules();
 
-			const forwards = this.core.filterUciSections(result.values, 'redirect');
+			const redirects = this.core.filterUciSections(result.values, 'redirect');
+			// A redirect with no external port is an all-ports DMZ host; manage it
+			// in its own card, not the port-forwarding table.
+			this._dmz = redirects.find(r => !r.src_dport && r.dest_ip) || null;
+			const forwards = redirects.filter(r => r.src_dport);
 			const rules = this.core.filterUciSections(result.values, 'rule');
 
 			this.core.renderTable(
@@ -880,6 +899,8 @@ export default class NetworkModule {
 				<td>${this.core.renderActionButtons(r.section)}</td>
 			</tr>`
 			);
+
+			this.renderDmz();
 		});
 	}
 
@@ -902,6 +923,117 @@ export default class NetworkModule {
 
 	deleteForward(id) {
 		this.core.uciDeleteEntry('firewall', id, 'Delete this port forwarding rule?', () => this.loadFirewall());
+	}
+
+	renderDmz() {
+		const status = document.getElementById('dmz-status');
+		if (!status) return;
+		const setBtn = document.getElementById('dmz-set-btn');
+		const removeBtn = document.getElementById('dmz-remove-btn');
+		const dmz = this._dmz;
+		if (!dmz) {
+			status.innerHTML = `${this.core.renderBadge('neutral', 'OFF')} <span class="dmz-status-text">No DMZ host. Every device stays behind the firewall.</span>`;
+			if (setBtn) setBtn.textContent = 'SET DMZ HOST';
+			removeBtn?.classList.add('hidden');
+			return;
+		}
+		const enabled = dmz.enabled !== '0';
+		const badge = enabled ? this.core.renderBadge('success', 'ENABLED') : this.core.renderBadge('neutral', 'DISABLED');
+		status.innerHTML = `${badge} <span class="dmz-status-text">All ports forwarded to <strong>${this.core.escapeHtml(dmz.dest_ip || '')}</strong></span>`;
+		if (setBtn) setBtn.textContent = 'CHANGE HOST';
+		removeBtn?.classList.remove('hidden');
+	}
+
+	async openDmzModal() {
+		this.core.resetModal('dmz-modal');
+		let leases = [];
+		try {
+			const [s, r] = await this.core.ubusCall('moci', 'getDHCPLeases', {}, { timeout: 10000 });
+			if (s === 0 && Array.isArray(r?.dhcp_leases)) leases = r.dhcp_leases;
+		} catch (error) { console.warn('DHCP leases unavailable:', error); }
+		try {
+			const [s, r] = await this.core.uciGet('network');
+			if (s === 0 && r?.values) this._lanNet = this.lanSubnet(r.values);
+		} catch (error) { console.warn('LAN subnet unavailable:', error); }
+
+		const dmz = this._dmz;
+		const selectedIp = dmz?.dest_ip || '';
+		this.populateDmzDeviceSelect(leases, selectedIp);
+		document.getElementById('edit-dmz-section').value = dmz?.section || '';
+		document.getElementById('edit-dmz-dest-ip').value = selectedIp;
+		document.getElementById('edit-dmz-enabled').value = dmz ? (dmz.enabled !== '0' ? '1' : '0') : '1';
+		this.core.openModal('dmz-modal');
+	}
+
+	populateDmzDeviceSelect(leases, selectedIp) {
+		const select = document.getElementById('dmz-device-select');
+		if (!select) return;
+		const ipNum = ip => String(ip).split('.').reduce((n, o) => n * 256 + (Number(o) || 0), 0);
+		const sorted = leases.filter(l => l.ipaddr).sort((a, b) => ipNum(a.ipaddr) - ipNum(b.ipaddr));
+		select.innerHTML = '';
+		const manual = document.createElement('option');
+		manual.value = '';
+		manual.textContent = 'Enter IP manually…';
+		select.appendChild(manual);
+		for (const lease of sorted) {
+			const opt = document.createElement('option');
+			opt.value = lease.ipaddr;
+			opt.textContent = lease.hostname ? `${lease.hostname} (${lease.ipaddr})` : lease.ipaddr;
+			select.appendChild(opt);
+		}
+		select.value = selectedIp || '';
+	}
+
+	lanSubnet(values) {
+		const lan = values.lan?.['.type'] === 'interface' ? values.lan
+			: Object.values(values).find(v => v?.['.type'] === 'interface' && v.ipaddr && v.proto === 'static');
+		if (!lan?.ipaddr) return null;
+		return { ipaddr: String(lan.ipaddr), netmask: String(lan.netmask || '255.255.255.0') };
+	}
+
+	dmzIpError(ip) {
+		const parts = String(ip).split('.');
+		if (parts.length !== 4 || !parts.every(p => /^\d{1,3}$/.test(p) && Number(p) <= 255)) {
+			return 'Enter a valid IPv4 address';
+		}
+		const net = this._lanNet;
+		if (!net) return null;
+		const oct = parts.map(Number);
+		const lan = net.ipaddr.split('.').map(Number);
+		const mask = net.netmask.split('.').map(Number);
+		if (lan.length === 4 && oct.every((o, i) => o === lan[i])) {
+			return 'The DMZ host cannot be the router itself';
+		}
+		const inSubnet = lan.length === 4 && mask.length === 4 && oct.every((o, i) => (o & mask[i]) === (lan[i] & mask[i]));
+		if (!inSubnet) return `The DMZ host must be on the LAN subnet (${net.ipaddr} / ${net.netmask})`;
+		return null;
+	}
+
+	saveDmz() {
+		const ip = document.getElementById('edit-dmz-dest-ip').value.trim();
+		const error = this.dmzIpError(ip);
+		if (error) {
+			this.core.showToast(error, 'error');
+			return;
+		}
+		if (!window.confirm(`Expose ALL ports of ${ip} to the internet?\n\nThe firewall will forward every incoming connection to this device. Only continue if you trust it and have secured it.`)) {
+			return;
+		}
+		this.core.uciSave({
+			config: 'firewall',
+			uciType: 'redirect',
+			modalId: 'dmz-modal',
+			sectionIdField: 'edit-dmz-section',
+			fieldMap: DMZ_FIELDS,
+			defaults: { src: 'wan', dest: 'lan', target: 'DNAT', proto: 'tcpudp', reflection: '1' },
+			reloadFn: () => this.loadFirewall(),
+			successMsg: 'DMZ host saved'
+		});
+	}
+
+	deleteDmz() {
+		if (!this._dmz) return;
+		this.core.uciDeleteEntry('firewall', this._dmz.section, 'Remove the DMZ host? The device will no longer be exposed to the internet.', () => this.loadFirewall());
 	}
 
 	editFirewallRule(id) {

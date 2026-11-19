@@ -22,7 +22,7 @@ export default class BandwidthModule{
 		try{
 			const [dl,oui]=await Promise.all([
 				this.exec('/usr/libexec/nlbwmon-action',['download','-f','json']),
-				import('./oui-data.js?v=1.0.0r5').then(m=>m.default).catch(()=>({}))
+				import('./oui-data.js?v=1.0.3r1').then(m=>m.default).catch(()=>({}))
 			]);
 			this.oui=oui||{};
 			if(dl.code!==0)throw new Error(String(dl.stderr||'nlbwmon is not running. Turn on Bandwidth Monitor in Features.'));

@@ -14,7 +14,7 @@
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="black" />
 		<link rel="apple-touch-icon" href="icons/icon-192.png" />
-		<link rel="stylesheet" href="app.css?v=1.0.0r5" />
+		<link rel="stylesheet" href="app.css?v=1.0.3r1" />
 	</head>
 	<body>
 		<div id="app">
@@ -881,6 +881,16 @@
 							</div>
 
 							<div class="stat-card" style="margin-top: 24px">
+								<div class="section-title">DMZ HOST</div>
+								<p class="dmz-warning">A DMZ host forwards <strong>every incoming port</strong> from the internet to one device, bypassing the firewall for that device. Only use this for a device you trust and have hardened. For most servers, a specific port forward above is safer.</p>
+								<div class="dmz-status" id="dmz-status"></div>
+								<div class="action-row" style="margin-top: 16px">
+									<button class="action-btn" id="dmz-set-btn">SET DMZ HOST</button>
+									<button class="action-btn danger hidden" id="dmz-remove-btn">REMOVE DMZ</button>
+								</div>
+							</div>
+
+							<div class="stat-card" style="margin-top: 24px">
 								<div class="section-title">FIREWALL RULES</div>
 								<button class="action-btn" id="add-fw-rule-btn" style="margin-bottom: 16px">
 									ADD RULE
@@ -1005,6 +1015,45 @@
 								<div class="modal-footer">
 									<button class="action-btn" id="cancel-forward-btn">CANCEL</button>
 									<button class="action-btn" id="save-forward-btn">SAVE RULE</button>
+								</div>
+							</div>
+						</div>
+
+						<div class="modal hidden" id="dmz-modal">
+							<div class="modal-backdrop"></div>
+							<div class="modal-content">
+								<div class="modal-header">
+									<h3 class="modal-title">DMZ HOST</h3>
+									<button class="modal-close" id="close-dmz-modal">&times;</button>
+								</div>
+								<div class="modal-body">
+									<input type="hidden" id="edit-dmz-section" />
+									<input type="hidden" id="edit-dmz-name" value="DMZ Host" />
+									<p class="dmz-warning">This exposes <strong>all ports</strong> of the chosen device to the internet. Make sure the device is trusted and secured.</p>
+									<div class="form-group">
+										<label class="form-label" for="dmz-device-select">CHOOSE A DEVICE</label>
+										<select id="dmz-device-select" class="form-input"></select>
+									</div>
+									<div class="form-group">
+										<label class="form-label" for="edit-dmz-dest-ip">INTERNAL IP ADDRESS</label>
+										<input
+											type="text"
+											id="edit-dmz-dest-ip"
+											class="form-input"
+											placeholder="192.168.68.100"
+										/>
+									</div>
+									<div class="form-group">
+										<label class="form-label" for="edit-dmz-enabled">ENABLED</label>
+										<select id="edit-dmz-enabled" class="form-input">
+											<option value="1">Yes</option>
+											<option value="0">No (Disabled)</option>
+										</select>
+									</div>
+								</div>
+								<div class="modal-footer">
+									<button class="action-btn" id="cancel-dmz-btn">CANCEL</button>
+									<button class="action-btn" id="save-dmz-btn">SAVE DMZ HOST</button>
 								</div>
 							</div>
 						</div>
@@ -2579,7 +2628,7 @@
 		</div>
 
 		<script type="module">
-			import { OpenWrtCore } from './js/core.js?v=1.0.0r5';
+			import { OpenWrtCore } from './js/core.js?v=1.0.3r1';
 			window.app = new OpenWrtCore();
 			window.app.init();
 		</script>

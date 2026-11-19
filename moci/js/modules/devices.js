@@ -32,7 +32,7 @@ export default class DevicesModule{
 				this.uci('get',{config:'network'}).catch(()=>({values:{}})),
 				this.uci('get',{config:'firewall'}).catch(()=>({values:{}})),
 				this.rpc('file','read',{path:'/proc/net/arp'}).catch(()=>({data:''})),
-				import('./oui-data.js?v=1.0.0r5').then(m=>m.default).catch(()=>({}))
+				import('./oui-data.js?v=1.0.3r1').then(m=>m.default).catch(()=>({}))
 			]);
 			this.oui=oui||{};
 			this.leases=Array.isArray(leases.dhcp_leases)?leases.dhcp_leases:[];
