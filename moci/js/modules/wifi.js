@@ -1,7 +1,8 @@
 // Wi-Fi — manage wireless networks (SSIDs) per radio. Reads wifi-device radios and
 // wifi-iface networks from UCI plus live status. Changes apply with the rollback-safe
 // wireless apply. On wired-only hardware (no radios) it shows a clear availability state.
-const encLabel={none:'Open','psk2':'WPA2-Personal','psk-mixed':'WPA/WPA2','sae':'WPA3-Personal','sae-mixed':'WPA2/WPA3','owe':'Enhanced Open'};
+const encLabel={none:'Open','psk2':'WPA2-Personal','psk-mixed':'WPA/WPA2','sae':'WPA3-Personal','sae-mixed':'WPA2/WPA3','owe':'Enhanced Open','wpa2':'WPA2-Enterprise','wpa3':'WPA3-Enterprise','wpa3-mixed':'WPA2/WPA3-Enterprise'};
+const isEnterprise=e=>['wpa2','wpa3','wpa3-mixed'].includes(e);
 export default class WifiModule{
 	constructor(core){
 		this.core=core;this.busy=false;
@@ -112,7 +113,7 @@ export default class WifiModule{
 		const ssid=this.el('input');ssid.className='form-input';ssid.placeholder='Home Wi-Fi';ssid.value=existing?.ssid||'';ssid.required=true;ssid.maxLength=32;
 		const key=this.el('input');key.className='form-input';key.type='password';key.placeholder='At least 8 characters';key.value=existing?.key||'';key.autocomplete='new-password';
 		const enc=this.el('select');enc.className='form-input';
-		for(const [val,label] of [['psk2','WPA2-Personal'],['sae','WPA3-Personal'],['sae-mixed','WPA2/WPA3'],['none','Open (no password)']]){
+		for(const [val,label] of [['psk2','WPA2-Personal'],['sae','WPA3-Personal'],['sae-mixed','WPA2/WPA3'],['none','Open (no password)'],['wpa2','WPA2-Enterprise (RADIUS)'],['wpa3','WPA3-Enterprise (RADIUS)'],['wpa3-mixed','WPA2/WPA3-Enterprise (RADIUS)']]){
 			const o=this.el('option',label);o.value=val;enc.append(o);
 		}
 		enc.value=existing?.encryption||'psk2';
@@ -122,17 +123,38 @@ export default class WifiModule{
 		const network=this.networkOptions(existing?.network);
 		const hidden=this.el('input');hidden.type='checkbox';hidden.checked=existing?.hidden==='1';
 		const hiddenLabel=this.el('label',undefined,'profiles-check');hiddenLabel.append(hidden,this.el('span','Hide the network name (SSID)'));
+		const first=v=>Array.isArray(v)?(v[0]||''):(v||'');
+		const authServer=this.el('input');authServer.className='form-input';authServer.placeholder='192.0.2.10';authServer.value=first(existing?.auth_server);
+		const authPort=this.el('input');authPort.className='form-input';authPort.type='number';authPort.value=existing?.auth_port||'1812';
+		const authSecret=this.el('input');authSecret.className='form-input';authSecret.type='password';authSecret.placeholder='RADIUS shared secret';authSecret.value=existing?.auth_secret||'';authSecret.autocomplete='new-password';
+		const acctServer=this.el('input');acctServer.className='form-input';acctServer.placeholder='optional accounting server';acctServer.value=first(existing?.acct_server);
+		const acctPort=this.el('input');acctPort.className='form-input';acctPort.type='number';acctPort.value=existing?.acct_port||'1813';
+		const acctSecret=this.el('input');acctSecret.className='form-input';acctSecret.type='password';acctSecret.placeholder='accounting secret';acctSecret.value=existing?.acct_secret||'';acctSecret.autocomplete='new-password';
+		const radiusWrap=this.el('div',undefined,'wifi-radius');
+		radiusWrap.append(this.el('p','WPA-Enterprise authenticates against an external RADIUS server (FreeRADIUS, Windows NPS, etc.). Uses the full wpad already shipped.','page-note'),
+			this.field('RADIUS auth server',authServer),this.field('Auth port',authPort),this.field('Auth secret',authSecret),
+			this.field('Accounting server (optional)',acctServer),this.field('Accounting port',acctPort),this.field('Accounting secret',acctSecret));
 		form.append(this.field('Network name (SSID)',ssid),this.field('Password',key),this.field('Security',enc),
-			this.field('Radio / band',radio),this.field('Network',network),hiddenLabel);
+			this.field('Radio / band',radio),this.field('Network',network),hiddenLabel,radiusWrap);
 		const save=this.el('button',existing?'SAVE NETWORK':'ADD NETWORK','action-btn');save.type='submit';
 		form.append(save);
-		const syncKey=()=>{key.disabled=enc.value==='none';if(enc.value==='none')key.value='';};
-		enc.addEventListener('change',syncKey);syncKey();
+		const syncEnc=()=>{
+			const e=enc.value;const ent=isEnterprise(e);
+			key.disabled=e==='none'||ent;if(e==='none')key.value='';
+			if(key.parentNode)key.parentNode.style.display=ent?'none':'';
+			radiusWrap.style.display=ent?'':'none';
+		};
+		enc.addEventListener('change',syncEnc);syncEnc();
 		form.addEventListener('submit',async e=>{
 			e.preventDefault();if(this.busy)return;
 			const values={ssid:ssid.value.trim(),encryption:enc.value,device:radio.value,network:network.value,hidden:hidden.checked?'1':'0'};
 			if(!values.ssid){this.core.showToast('Enter a network name','error');return;}
-			if(enc.value!=='none'){
+			if(isEnterprise(enc.value)){
+				if(!authServer.value.trim()||!authSecret.value){this.core.showToast('RADIUS auth server and secret are required','error');return;}
+				values.auth_server=[authServer.value.trim()];values.auth_port=authPort.value||'1812';values.auth_secret=authSecret.value;
+				values.ieee80211w=enc.value==='wpa3'?'2':'1';
+				if(acctServer.value.trim()){values.acct_server=[acctServer.value.trim()];values.acct_port=acctPort.value||'1813';values.acct_secret=acctSecret.value;}
+			}else if(enc.value!=='none'){
 				if(key.value.length<8){this.core.showToast('Password must be at least 8 characters','error');return;}
 				values.key=key.value;
 			}

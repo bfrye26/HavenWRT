@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=moci
-PKG_VERSION:=1.1.0
+PKG_VERSION:=1.2.0
 PKG_RELEASE:=1
 
 PKG_MAINTAINER:=HudsonGraeme
@@ -56,6 +56,7 @@ define Package/moci/install
 	$(INSTALL_BIN) ./files/moci-service-inspect $(1)/usr/libexec/moci-service-inspect
 	$(INSTALL_BIN) ./files/moci-hardware-check $(1)/usr/libexec/moci-hardware-check
 	$(INSTALL_BIN) ./files/moci-verify-image $(1)/usr/libexec/moci-verify-image
+	$(INSTALL_BIN) ./files/moci-openvpn $(1)/usr/libexec/moci-openvpn
 	$(INSTALL_DIR) $(1)/etc/moci
 	$(INSTALL_DATA) ./files/moci-image.pub $(1)/etc/moci/moci-image.pub
 	$(INSTALL_DIR) $(1)/usr/sbin

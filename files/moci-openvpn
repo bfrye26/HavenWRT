@@ -1,0 +1,37 @@
+#!/bin/sh
+# Haven OpenVPN helper. Generates server PKI with openssl (fast EC DH via
+# ecdh-curve, no slow dhparam). Called by the web UI through rpcd file exec.
+#   moci-openvpn gen-server <name>   -> CA + server cert/key under /etc/openvpn/<name>/
+#   moci-openvpn gen-client <name> <cn> -> client cert/key (printed paths)
+ACTION="$1"; NAME="$2"; CN="$3"
+DIR="/etc/openvpn/$NAME"
+fail() { printf '{"ok":false,"error":"%s"}\n' "$1"; exit 1; }
+[ -n "$NAME" ] || fail "missing name"
+case "$NAME" in *[!a-zA-Z0-9_-]*) fail "invalid name" ;; esac
+case "$ACTION" in
+  gen-server)
+    mkdir -p "$DIR" || fail "mkdir failed"
+    openssl req -x509 -newkey rsa:2048 -keyout "$DIR/ca.key" -out "$DIR/ca.crt" \
+      -days 3650 -nodes -subj "/CN=Haven-VPN-CA" >/dev/null 2>&1 || fail "CA generation failed"
+    openssl req -newkey rsa:2048 -keyout "$DIR/server.key" -out "$DIR/server.csr" \
+      -nodes -subj "/CN=$NAME" >/dev/null 2>&1 || fail "server key failed"
+    openssl x509 -req -in "$DIR/server.csr" -CA "$DIR/ca.crt" -CAkey "$DIR/ca.key" \
+      -CAcreateserial -out "$DIR/server.crt" -days 3650 >/dev/null 2>&1 || fail "server cert failed"
+    rm -f "$DIR/server.csr"
+    chmod 600 "$DIR"/*.key
+    printf '{"ok":true,"dir":"%s","ca":"%s/ca.crt","cert":"%s/server.crt","key":"%s/server.key"}\n' "$DIR" "$DIR" "$DIR" "$DIR"
+    ;;
+  gen-client)
+    [ -n "$CN" ] || fail "missing client CN"
+    mkdir -p "$DIR" || fail "mkdir failed"
+    [ -f "$DIR/ca.crt" ] || fail "server PKI missing"
+    openssl req -newkey rsa:2048 -keyout "$DIR/$CN.key" -out "$DIR/$CN.csr" \
+      -nodes -subj "/CN=$CN" >/dev/null 2>&1 || fail "client key failed"
+    openssl x509 -req -in "$DIR/$CN.csr" -CA "$DIR/ca.crt" -CAkey "$DIR/ca.key" \
+      -CAcreateserial -out "$DIR/$CN.crt" -days 3650 >/dev/null 2>&1 || fail "client cert failed"
+    rm -f "$DIR/$CN.csr"
+    chmod 600 "$DIR/$CN.key"
+    printf '{"ok":true,"ca":"%s/ca.crt","cert":"%s/%s.crt","key":"%s/%s.key"}\n' "$DIR" "$DIR" "$CN" "$DIR" "$CN"
+    ;;
+  *) fail "unknown action" ;;
+esac

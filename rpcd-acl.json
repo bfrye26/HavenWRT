@@ -36,6 +36,18 @@
         "/tmp/backup.tar.gz": [
           "read"
         ],
+        "/etc/banip/banip.feeds": [
+          "read"
+        ],
+        "/etc/banip/banip.allowlist": [
+          "read"
+        ],
+        "/etc/banip/banip.blocklist": [
+          "read"
+        ],
+        "/etc/ipsec.secrets": [
+          "read"
+        ],
         "/usr/libexec/moci-pkg-call list-present": [
           "exec"
         ],
@@ -137,6 +149,9 @@
         "network.wireless": [
           "status"
         ],
+        "dhcp": [
+          "ipv6leases"
+        ],
         "uci": [
           "get",
           "changes",
@@ -186,6 +201,8 @@
         "rpcd",
         "moci_wifi_schedule",
         "moci_quota",
+        "opennds",
+        "ipsec",
         "smartdns",
         "watchcat",
         "vnstat",
@@ -244,6 +261,18 @@
         "/tmp/restore.tar.gz": [
           "write"
         ],
+        "/etc/banip/banip.allowlist": [
+          "write"
+        ],
+        "/etc/banip/banip.blocklist": [
+          "write"
+        ],
+        "/etc/openvpn/*": [
+          "write"
+        ],
+        "/etc/ipsec.secrets": [
+          "write"
+        ],
         "/usr/libexec/moci-verify-image /tmp/firmware.bin": [
           "exec"
         ],
@@ -272,6 +301,27 @@
           "exec"
         ],
         "/sbin/sysupgrade --restore /tmp/restore.tar.gz": [
+          "exec"
+        ],
+        "/etc/init.d/banip status": [
+          "exec"
+        ],
+        "/etc/init.d/banip report *": [
+          "exec"
+        ],
+        "/etc/init.d/banip search *": [
+          "exec"
+        ],
+        "/usr/libexec/moci-openvpn *": [
+          "exec"
+        ],
+        "/usr/bin/ndsctl *": [
+          "exec"
+        ],
+        "/usr/sbin/swanctl *": [
+          "exec"
+        ],
+        "/usr/sbin/ipsec *": [
           "exec"
         ],
         "/sbin/sysupgrade --test /tmp/firmware.bin": [
@@ -394,6 +444,8 @@
         "rpcd",
         "moci_wifi_schedule",
         "moci_quota",
+        "opennds",
+        "ipsec",
         "smartdns",
         "watchcat",
         "vnstat",

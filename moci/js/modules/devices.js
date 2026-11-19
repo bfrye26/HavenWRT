@@ -26,13 +26,14 @@ export default class DevicesModule{
 		if(!this.root)return;
 		this.root.replaceChildren(this.el('p','Discovering devices on your network…','page-loading'));
 		try{
-			const [leases,dhcp,network,firewall,arp,oui]=await Promise.all([
+			const [leases,dhcp,network,firewall,arp,oui,v6]=await Promise.all([
 				this.rpc('moci','getDHCPLeases').catch(()=>({dhcp_leases:[]})),
 				this.uci('get',{config:'dhcp'}),
 				this.uci('get',{config:'network'}).catch(()=>({values:{}})),
 				this.uci('get',{config:'firewall'}).catch(()=>({values:{}})),
 				this.rpc('file','read',{path:'/proc/net/arp'}).catch(()=>({data:''})),
-				import('./oui-data.js?v=1.1.0r1').then(m=>m.default).catch(()=>({}))
+				import('./oui-data.js?v=1.2.0r1').then(m=>m.default).catch(()=>({})),
+				this.rpc('dhcp','ipv6leases').catch(()=>({}))
 			]);
 			this.oui=oui||{};
 			this.leases=Array.isArray(leases.dhcp_leases)?leases.dhcp_leases:[];
@@ -41,10 +42,34 @@ export default class DevicesModule{
 			this.firewall=firewall.values||{};
 			this.reservations=Object.entries(this.dhcp).filter(([,v])=>v?.['.type']==='host');
 			this.connected=this.buildConnected(arp.data);
+			this.v6ByMac=this.buildV6Map(v6);
 			this.render();
 		}catch(e){this.root.replaceChildren(this.el('p','Unable to read devices: '+e.message,'page-error'));}
 	}
 	resForMac(mac){return this.reservations.find(([,v])=>normMac(v.mac)===normMac(mac));}
+	// Map device MAC -> global IPv6 address from odhcpd leases (DUID-LL embeds the MAC).
+	buildV6Map(v6){
+		const map={};
+		const containers=Object.values(v6?.device||v6||{});
+		for(const c of containers){
+			for(const lease of (c?.leases||[])){
+				const duid=String(lease.duid||'');
+				const m=/^00030001([0-9a-f]{12})$/i.exec(duid);
+				if(!m)continue;
+				const mac=m[1].match(/../g).join(':');
+				const addr=(lease['ipv6-addr']||[]).map(a=>a.address).find(Boolean);
+				if(addr)map[normMac(mac)]=addr;
+			}
+		}
+		return map;
+	}
+	ipCell(dev){
+		const td=this.el('td',undefined,'dev-mono');
+		td.append(this.el('div',dev.ipaddr));
+		const v6=this.v6ByMac?.[normMac(dev.macaddr)];
+		if(v6)td.append(this.el('div',v6,'dev-res-meta'));
+		return td;
+	}
 	// Internet pause = one named firewall REJECT rule keyed by MAC (survives IP changes).
 	blockRuleForMac(mac){
 		const name='moci_block_'+normMac(mac);
@@ -234,7 +259,7 @@ export default class DevicesModule{
 				identity.append(this.el('span',name,'dev-name'),this.el('span',dev.macaddr,'dev-mono dev-res-meta'));
 				nameCell.append(identity);
 				const profile=this.profileForIp(dev.ipaddr);
-				tr.append(nameCell,this.el('td',this.vendorForMac(dev.macaddr)),this.el('td',dev.ipaddr,'dev-mono'),
+				tr.append(nameCell,this.el('td',this.vendorForMac(dev.macaddr)),this.ipCell(dev),
 					this.el('td',profile),this.el('td',dev.expires>0?this.fmtLease(dev.expires):'—'));
 				const typeCell=this.el('td');
 				const typeLabel=dev.isStatic?'Static':(dev.hasLease?'DHCP':'Other');

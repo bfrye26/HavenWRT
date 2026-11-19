@@ -23,6 +23,7 @@ export default class WanModule{
 			]);
 			const ifaces=Array.isArray(dump.interface)?dump.interface:[];
 			this.status=ifaces.find(i=>i.interface==='wan')||{};
+			this.status6=ifaces.find(i=>i.interface==='wan6')||{};
 			this.network=net.values||{};
 			this.render();
 		}catch(e){this.root.replaceChildren(this.el('p','Unable to read the WAN interface: '+e.message,'page-error'));}
@@ -91,7 +92,67 @@ export default class WanModule{
 		});
 		root.append(form);
 
+		this.renderIPv6(root);
+
 		root.append(this.el('p','Changing the connection type briefly interrupts the Internet link. MoCI applies the change with a 60-second safety rollback — if the router becomes unreachable, the previous settings are restored automatically.','page-note'));
+	}
+	renderIPv6(root){
+		const wan6=this.network.wan6||{};
+		const st=this.status6||{};
+		const exists=!!this.network.wan6;
+		const active=exists&&wan6.disabled!=='1';
+		const up=!!st.up;
+		const v6=(st['ipv6-address']||[])[0];
+		const prefix=(st['ipv6-prefix']||[])[0];
+		const route6=(st.route||[]).find(r=>r.target==='::');
+		const card=this.el('section',undefined,'stat-card');card.style.marginTop='24px';
+		card.append(this.el('div','IPv6','section-title'));
+		const facts=this.el('div',undefined,'wan-facts');
+		const fact=(k,v)=>{const f=this.el('div',undefined,'wan-fact');f.append(this.el('span',k,'wan-fact-k'),this.el('span',v||'—','wan-fact-v'));return f;};
+		facts.append(
+			fact('Status',active?(up?'Active':'Configured (no address yet)'):'Disabled'),
+			fact('IPv6 address',v6?v6.address+'/'+v6.mask:'—'),
+			fact('Delegated prefix',prefix?prefix.address+'/'+prefix.mask:'—'),
+			fact('Gateway',route6?route6.nexthop:'—')
+		);
+		card.append(facts);
+		const form=this.el('div',undefined,'wan-fields');form.style.marginTop='14px';
+		const enabled=this.el('select');enabled.className='form-input';
+		for(const [v,l] of [['1','Enabled (DHCPv6 / SLAAC)'],['0','Disabled']]){const o=this.el('option',l);o.value=v;enabled.append(o);}
+		enabled.value=active?'1':'0';
+		const reqaddress=this.el('select');reqaddress.className='form-input';
+		for(const [v,l] of [['try','Try to obtain an address'],['force','Force an address'],['no','Do not request an address']]){const o=this.el('option',l);o.value=v;reqaddress.append(o);}
+		reqaddress.value=wan6.reqaddress||'try';
+		const reqprefix=this.el('select');reqprefix.className='form-input';
+		for(const [v,l] of [['auto','Automatic prefix length'],['no','No prefix (address only)'],['48','/48'],['56','/56'],['60','/60'],['64','/64']]){const o=this.el('option',l);o.value=v;reqprefix.append(o);}
+		reqprefix.value=wan6.reqprefix||'auto';
+		form.append(this.field('IPv6 uplink',enabled,'Uses the same physical link as your IPv4 WAN.'),
+			this.field('Address request',reqaddress),this.field('Prefix delegation',reqprefix,'Your ISP delegates a prefix for your LAN via RA/DHCPv6.'));
+		card.append(form);
+		const save=this.el('button','SAVE IPv6','action-btn');save.type='button';save.style.marginTop='12px';
+		save.addEventListener('click',()=>this.saveWan6(enabled.value,reqaddress.value,reqprefix.value,save));
+		card.append(save);
+		root.append(card);
+	}
+	async saveWan6(enabled,reqaddress,reqprefix,save){
+		if(!window.confirm(enabled==='1'?'Enable IPv6 on the WAN (DHCPv6/SLAAC)?':'Disable the IPv6 WAN interface?'))return;
+		save.disabled=true;
+		try{
+			if(enabled==='1'){
+				if(!this.network.wan6)await this.uci('add',{config:'network',type:'interface',name:'wan6'});
+				await this.uci('set',{config:'network',section:'wan6',values:{proto:'dhcpv6',device:'@wan',reqaddress,reqprefix,disabled:'0'}});
+			}else if(this.network.wan6){
+				await this.uci('set',{config:'network',section:'wan6',values:{disabled:'1'}});
+			}
+			await this.uci('apply',{rollback:true,timeout:60});
+			await new Promise(r=>setTimeout(r,2500));
+			await this.rpc('system','info');
+			if(!window.confirm('The router is still reachable. Keep the IPv6 settings?\nCancel to roll back automatically.'))throw new Error('Change not confirmed; rolling back.');
+			await this.uci('confirm',{});
+			this.core.showToast('IPv6 settings updated','success');
+			await this.show();
+		}catch(e){this.core.showToast('IPv6 change not applied: '+e.message,'error');}
+		finally{save.disabled=false;}
 	}
 	renderFields(proto,fields,wan={}){
 		fields.replaceChildren();
